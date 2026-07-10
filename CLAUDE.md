@@ -4,7 +4,17 @@
 
 Construir MVP de gerador de histórias que demonstra memória de longo prazo **verificável**. Diferencial: harness de avaliação quantitativa que prova recall cross-session, consistência de personagens, evolução de world state. Não é chat com vector store.
 
-Projeto tocado como portfólio de TCC. Prazo ~5-6 semanas @ 20h/sem. Você (Claude) é o executor principal; o dev humano (marco) intervém em decisões de escopo e prompt tuning.
+Projeto tocado como portfólio + experimento comercial (Babel é o TCC do marco, projeto separado). Prazo flexível — não há banca. Alvo: ~7 semanas @ 20h/sem (130h total), ajustável. Você (Claude) é o executor principal; o dev humano (marco) intervém em decisões de escopo e prompt tuning.
+
+## Papel do LLM
+
+O LLM é o **motor narrativo fixo**. Não vamos treinar/fine-tunar. Constrói-se infra **em volta** dele (memória, reflection, retrieval) e mede-se se essa infra faz o **mesmo LLM** performar melhor. O LLM é o sujeito da medição, não o medidor.
+
+**Design principle:** `LlmClient` é Protocol. Duas impls:
+- `FakeLlmClient` (Sprints 1-2): respostas templadas determinísticas. Zero custo. Toda a wiring é validada sem tocar API.
+- `AnthropicLlmClient` (Sprint 3+): impl real. Primeira medição de baseline.
+
+Config switch: `LLM_BACKEND=fake|anthropic` no `.env`. Default `fake` em dev. Sprint 3 é a primeira vez que precisa de `ANTHROPIC_API_KEY`.
 
 ## Stack fixado
 

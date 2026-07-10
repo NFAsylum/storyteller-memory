@@ -42,11 +42,32 @@ Sistema de turno: usuário envia ação → LLM continua a narrativa → sistema
 
 ## Módulos
 
-### `core/llm_client.py`
-Wrapper Anthropic SDK.
-- `LlmClient.__init__(model="claude-sonnet-4-6", api_key)` — retry exponencial (max 3), timeout 60s, cost logging por chamada
-- `generate(system, messages, tools=None) -> LlmResponse` — retorna `content`, `stop_reason`, `usage`, `cost_usd`
-- Erros de rate limit (429) fazem backoff automático
+### `core/llm_client.py` — Protocol
+
+`LlmClient` é `Protocol`. Duas impls:
+
+```python
+class LlmClient(Protocol):
+    def generate(
+        self,
+        system: str,
+        messages: list[dict],
+        tools: list | None = None,
+    ) -> LlmResponse: ...
+
+class LlmResponse(BaseModel):
+    content: str
+    stop_reason: str
+    usage: dict
+    cost_usd: float
+```
+
+- **`FakeLlmClient` (`core/llm_fakes.py`)**: retorna resposta templada determinística, hash do prompt como seed. `cost_usd=0`. Sem API key. Sprints 1-2 rodam 100% com Fake.
+- **`AnthropicLlmClient` (`core/llm_anthropic.py`)**: wrapper Anthropic SDK. Retry exponencial (max 3), timeout 60s, cost logging, backoff em 429. Precisa de `ANTHROPIC_API_KEY`. Ativado em Sprint 3+.
+
+Factory: `create_llm_client()` em `core/llm_client.py` lê env `LLM_BACKEND` (default `fake`) e retorna a impl correta.
+
+Mesma lógica pra `Reflection`: `Reflection` Protocol + `FakeReflection` (regra determinística) + `AnthropicReflection` (Sprint 3, LLM sumariza).
 
 ### `core/story_loop.py`
 Coordena um turno.

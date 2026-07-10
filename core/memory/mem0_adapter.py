@@ -16,6 +16,9 @@ DEFAULT_EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 DEFAULT_EMBED_DIMS = 384  # all-MiniLM-L6-v2 output dimensionality
 DEFAULT_STORAGE_PATH = "./.mem0_data"
 COLLECTION_NAME = "storyteller"
+# Used only to satisfy mem0's eager Anthropic-LLM construction when no real key is
+# present; never sent to the API because Sprint 1-2 calls use infer=False.
+PLACEHOLDER_API_KEY = "sk-ant-placeholder-unused-with-infer-false"
 
 
 @dataclass(frozen=True)
@@ -82,7 +85,12 @@ class Mem0Adapter:
         # needed for a real instance, not for unit tests that inject a fake memory.
         from mem0 import Memory as Mem0Memory
 
-        resolved_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        # mem0 constructs the Anthropic LLM eagerly at from_config, and the SDK raises
+        # without a key. In Sprints 1-2 we only call add(infer=False)/search, which never
+        # invoke that LLM (only the local embedder), so a placeholder key is safe and
+        # keeps the whole pipeline runnable without ANTHROPIC_API_KEY. A real key is only
+        # required once reflection uses the LLM (Sprint 3).
+        resolved_key = api_key or os.environ.get("ANTHROPIC_API_KEY") or PLACEHOLDER_API_KEY
         resolved_path = storage_path or os.environ.get("MEM0_STORAGE_PATH", DEFAULT_STORAGE_PATH)
         config = build_mem0_config(resolved_key, resolved_path, llm_model, embed_model)
         return Mem0Memory.from_config(config)

@@ -1,22 +1,20 @@
 """Manual smoke test for S1.3: run 5 consecutive story turns in one session.
 
-PENDING VERIFICATION — needs a live LLM and the mem0 backend, so it cannot run in the
-CI sandbox. Requirements to run:
-  - ANTHROPIC_API_KEY exported (or in .env)
-  - mem0 embedder deps installed: sentence-transformers, faiss-cpu (first run downloads
-    the ~100MB all-MiniLM-L6-v2 model)
+Runs entirely on the deterministic FakeLlmClient by default — no ANTHROPIC_API_KEY, no
+cost. Set LLM_BACKEND=anthropic (+ a real key) to exercise the real backend later.
+
+Requires the mem0 backend deps (sentence-transformers, faiss-cpu); the first run
+downloads the ~100MB embedder model.
 
 Run: poetry run python scripts/manual_test.py
-
-Expected: 5 non-empty narrations printed, then list_all() showing 5 stored memories.
+Expected: 5 non-empty, deterministic narrations, then list_all() showing 5 memories.
 """
 
 from __future__ import annotations
 
 import os
-import sys
 
-from core.llm_client import LlmClient
+from core.llm_client import create_llm_client
 from core.memory.mem0_adapter import Mem0Adapter
 from core.story_loop import StoryLoop
 
@@ -31,11 +29,10 @@ TURNS = [
 
 
 def main() -> int:
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ERROR: ANTHROPIC_API_KEY not set — cannot run the live smoke test.", file=sys.stderr)
-        return 2
+    backend = os.environ.get("LLM_BACKEND", "fake")
+    print(f"LLM backend: {backend}")
 
-    llm = LlmClient()
+    llm = create_llm_client()
     memory = Mem0Adapter(SESSION_ID)
     # Start clean so the per-turn count is unambiguous.
     memory.clear()
@@ -48,7 +45,7 @@ def main() -> int:
         print(f"\n===== TURN {i} of {len(TURNS)} =====")
         print(f"> {user_input}\n")
         print(result.narrator_text)
-        print(f"[stored memory ids: {result.stored_memory_ids} | turn cost: ${result.cost_usd:.6f}]")
+        print(f"[stored: {result.stored_memory_ids} | turn cost: ${result.cost_usd:.6f}]")
 
     stored = memory.list_all()
     print("\n===== mem0.list_all() =====")

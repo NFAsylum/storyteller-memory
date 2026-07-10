@@ -1,28 +1,22 @@
 """Minimal turn manager (S1.3 v1): user input -> LLM narration -> store raw turn in mem0.
 
-No retrieval or world state yet — the prompt's world_state/memory slots are filled with
-placeholders. Sprint 2 wires in RetrievalPolicy and populates them.
+The LLM is injected as an LlmClient Protocol, so the loop runs identically on the
+deterministic FakeLlmClient (Sprints 1-2) and the real AnthropicLlmClient (Sprint 3+).
+No retrieval or world state yet — the prompt's world_state/memory slots are placeholders;
+Sprint 2 wires in RetrievalPolicy and populates them.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
+
+from core.llm_client import LlmClient
+from core.memory.mem0_adapter import Mem0Adapter
 
 _PROMPT_PATH = Path(__file__).parent / "prompts" / "story_continuation.txt"
 _EMPTY_SLOT = "(none yet)"
-DEFAULT_MAX_TOKENS = 1024
-
-
-class _Narrator(Protocol):
-    def generate(
-        self, system: str | None, messages: list[dict[str, Any]], max_tokens: int = ...
-    ) -> Any: ...
-
-
-class _Memory(Protocol):
-    def add(self, text: str, metadata: dict[str, Any] | None = ...) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -43,16 +37,14 @@ class StoryLoop:
     def __init__(
         self,
         session_id: str,
-        memory: _Memory,
-        llm: _Narrator,
+        memory: Mem0Adapter,
+        llm: LlmClient,
         *,
         prompt_template: str | None = None,
-        max_tokens: int = DEFAULT_MAX_TOKENS,
     ) -> None:
         self.session_id = session_id
         self.memory = memory
         self.llm = llm
-        self.max_tokens = max_tokens
         self._prompt_template = prompt_template or load_prompt_template()
         self._turn = 0
 
@@ -74,7 +66,6 @@ class StoryLoop:
         response = self.llm.generate(
             system=prompt,
             messages=[{"role": "user", "content": user_input}],
-            max_tokens=self.max_tokens,
         )
         narrator_text = response.content
 

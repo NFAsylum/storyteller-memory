@@ -118,7 +118,7 @@ End-to-end sem LLM real. Verifica que os DADOS fluem certo.
 ### Verificação final Sprint 2
 - [x] `pytest` inteiro verde (49 testes)
 - [x] `unset ANTHROPIC_API_KEY && poetry run python scripts/manual_test_sprint2.py` roda até o fim, mostra que world_state populou
-- [ ] Estrutura de dados verificada: characters/locations/relations/story_beats existem e têm registros
+- [x] Estrutura de dados verificada: characters/locations/relations/story_beats existem e têm registros
 
 ---
 

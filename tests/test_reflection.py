@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 from core.memory.mem0_adapter import MemoryRecord
 from core.memory.reflection import FakeReflection, Reflection, ReflectionResult
-from core.memory.world_state import Base, Character, StoryBeat, WorldState
+from core.memory.world_state import Base, Character, Location, Relation, StoryBeat, WorldState
 
 SESSION = "sess-1"
 
@@ -88,6 +88,44 @@ def test_repeated_event_does_not_duplicate(world: WorldState) -> None:
 
     aria_rows = [c for c in world.list(Character, SESSION) if c.name == "Aria"]
     assert len(aria_rows) == 1  # updated, not duplicated
+
+
+def test_location_extracted_from_place_phrase(world: WorldState) -> None:
+    records = [
+        _turn(1, "Aria chega ao castelo de Aldrath."),
+        _turn(2, "Aria cruza o reino de Morwyn."),
+        _turn(3, "Aria retorna ao castelo de Aldrath."),
+    ]
+    _reflect(world, records)
+
+    names = {loc.name for loc in world.list(Location, SESSION)}
+    assert {"Aldrath", "Morwyn"} <= names
+    # deduped by name despite two "castelo de Aldrath" mentions
+    assert len([loc for loc in world.list(Location, SESSION) if loc.name == "Aldrath"]) == 1
+
+
+def test_relation_links_top_two_characters_without_duplicating(world: WorldState) -> None:
+    records = [
+        _turn(1, "Aria e Vex discutem."),
+        _turn(2, "Aria acusa Vex."),
+        _turn(3, "Vex desafia Aria."),
+    ]
+    result = _reflect(world, records, since_turn=0)
+    assert result.relations_updated == 1
+    rels = world.list(Relation, SESSION)
+    assert len(rels) == 1
+    assert rels[0].kind == "co-ocorrencia"
+
+    # same top-2 pair again -> no duplicate relation
+    again = _reflect(world, records, since_turn=0)
+    assert again.relations_updated == 0
+    assert len(world.list(Relation, SESSION)) == 1
+
+
+def test_single_character_creates_no_relation(world: WorldState) -> None:
+    result = _reflect(world, [_turn(1, "Aria."), _turn(2, "Aria."), _turn(3, "Aria.")])
+    assert result.relations_updated == 0
+    assert world.list(Relation, SESSION) == []
 
 
 def test_counts_are_non_negative(world: WorldState) -> None:

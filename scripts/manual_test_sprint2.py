@@ -83,12 +83,14 @@ def main() -> int:
             print(f"turn {i:2d} | retrieved: {n_mem} memories, {n_chars} active_characters")
 
         characters = sorted(c.name for c in world.list(Character, SESSION_ID))
+        locations = sorted(loc.name for loc in world.list(Location, SESSION_ID))
+        relations = world.list(Relation, SESSION_ID)
         beats = sorted(world.list(StoryBeat, SESSION_ID), key=lambda b: b.turn)
-        n_locations = len(world.list(Location, SESSION_ID))
-        n_relations = len(world.list(Relation, SESSION_ID))
 
         print("\n===== world_state =====")
         print(f"characters ({len(characters)}): {characters}")
+        print(f"locations ({len(locations)}): {locations}")
+        print(f"relations ({len(relations)}): {[r.kind for r in relations]}")
         print(f"story_beats ({len(beats)}):")
         for beat in beats:
             print(f"  turn {beat.turn}: {beat.summary}")
@@ -96,13 +98,13 @@ def main() -> int:
         # last 10 turns each returned at least one retrieved item
         last10_min = min(retrieved_counts[-10:]) if len(retrieved_counts) >= 10 else 0
         checks = {
-            "tables populated (characters > 0)": len(characters) > 0,
+            "all 4 tables have records": min(len(characters), len(locations), len(relations), len(beats)) > 0,
             f"reflection fired {EXPECTED_REFLECTIONS}x (story_beats == {EXPECTED_REFLECTIONS})": len(beats)
             == EXPECTED_REFLECTIONS,
             "retrieval > 0 across last 10 turns": last10_min > 0,
         }
         print("\n===== checks =====")
-        print(f"tables: characters={len(characters)} locations={n_locations} relations={n_relations} story_beats={len(beats)}")
+        print(f"tables: characters={len(characters)} locations={len(locations)} relations={len(relations)} story_beats={len(beats)}")
         for label, passed in checks.items():
             print(f"  [{'PASS' if passed else 'FAIL'}] {label}")
 

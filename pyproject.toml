@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "storyteller"
+version = "0.1.0"
+description = "LLM storyteller with long-term memory + eval harness"
+authors = ["marco <marcooinotna13@outlook.com>"]
+readme = "README.md"
+packages = [{include = "core"}, {include = "eval"}, {include = "api"}, {include = "ui"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+anthropic = "^0.40.0"
+mem0ai = "^0.1.0"
+fastapi = "^0.115.0"
+uvicorn = "^0.32.0"
+streamlit = "^1.40.0"
+sqlalchemy = "^2.0.0"
+alembic = "^1.13.0"
+psycopg2-binary = "^2.9.0"
+pydantic = "^2.9.0"
+pydantic-settings = "^2.5.0"
+python-dotenv = "^1.0.0"
+tenacity = "^9.0.0"
+tiktoken = "^0.8.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+pytest-cov = "^5.0.0"
+pytest-mock = "^3.14.0"
+ruff = "^0.7.0"
+mypy = "^1.13.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"

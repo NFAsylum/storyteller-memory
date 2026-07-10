@@ -50,7 +50,7 @@ Modelos pra representar cenários de teste. Ainda sem harness — só shape.
 - `load_scenario(path) -> Scenario` valida JSON contra o model
 - 3 testes: load válido, load com JSON malformado falha claro, load com pergunta sem ground_truth falha claro
 
-### [ ] S1.5 — 3 cenários seed (3 h)
+### [x] S1.5 — 3 cenários seed (3 h)
 Escrever `eval/scenarios/seed_01.json`, `seed_02.json`, `seed_03.json`. Cada um: 5 cenas, 10 perguntas cobrindo recall factual.
 **DoD:**
 - Cada JSON valida contra `Scenario` model (S1.4)

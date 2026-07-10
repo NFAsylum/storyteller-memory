@@ -31,7 +31,7 @@ Wrapper Anthropic SDK com retry, timeout, cost logging.
 - Sem `ANTHROPIC_API_KEY` no env, `FakeLlmClient` funciona 100%
 - `pytest tests/test_llm_client.py` verde (originais + 3 novos)
 
-### [ ] S1.3 — `core/story_loop.py` v1 (5 h) — retrofit + integração
+### [x] S1.3 — `core/story_loop.py` v1 (5 h) — retrofit + integração
 Turn manager mínimo: input → LLM (via Protocol) → armazena em mem0.
 **Nota:** código do story_loop já existe. Precisa apontar pro Protocol em vez do wrapper Anthropic direto. `scripts/manual_test.py` deve rodar com FakeLlmClient por default.
 **DoD:**

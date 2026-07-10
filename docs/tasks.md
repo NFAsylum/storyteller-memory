@@ -9,12 +9,12 @@ Total: 110 h. Ordem sequencial dentro do sprint, mas tarefas dentro do mesmo spr
 ## Sprint 1 — Fundação mensurável (20 h)
 
 ### [ ] S1.1 — Setup do projeto (3 h)
-Criar estrutura: Poetry, dependências, docker-compose.yml com Postgres, .env.example.
+Criar estrutura: Poetry, dependências, `.env.example`. **SQLite** pra dev (arquivo local); migração pra Postgres no Sprint 5.
 **DoD:**
-- `docker compose up -d` sobe Postgres na porta 5432
 - `poetry install` termina sem erro
-- `poetry run pytest` executa (0 testes por enquanto, mas exit code 0)
-- `.env.example` lista `ANTHROPIC_API_KEY`, `DATABASE_URL`
+- `poetry run pytest` executa (0 testes por enquanto, exit 5 é ok — sem testes coletados)
+- `.env.example` lista `ANTHROPIC_API_KEY` e `DATABASE_URL=sqlite:///./storyteller.db`
+- **Não** gerar `docker-compose.yml` (dev não precisa; deploy usa Fly Postgres)
 
 ### [ ] S1.2 — `core/llm_client.py` (3 h)
 Wrapper Anthropic SDK com retry, timeout, cost logging.
@@ -54,12 +54,13 @@ Escrever `eval/scenarios/seed_01.json`, `seed_02.json`, `seed_03.json`. Cada um:
 
 ## Sprint 2 — World state + reflection (20 h)
 
-### [ ] S2.1 — Schema Postgres + migrations (4 h)
-Criar tabelas: `characters`, `locations`, `relations`, `story_beats`. Usar Alembic.
+### [ ] S2.1 — Schema SQLite + migrations (4 h)
+Criar tabelas via SQLAlchemy 2.0: `characters`, `locations`, `relations`, `story_beats`. Alembic pra migrations. **Tipos devem ser portáveis SQLite ↔ Postgres** (usar `JSON` genérico, não JSONB; sem ARRAY — traits/tags como JSON list).
 **DoD:**
-- `alembic upgrade head` cria as 4 tabelas
+- `alembic upgrade head` cria as 4 tabelas no SQLite
 - Seed script `scripts/seed_test_data.py` insere 3 personagens fake, roda sem erro
 - `pytest tests/test_world_state.py` cobre CRUD básico das 4 entidades
+- Nenhum tipo Postgres-only nas migrations (grep por `JSONB`, `ARRAY`, `postgresql.` deve retornar 0)
 
 ### [ ] S2.2 — `core/memory/reflection.py` (8 h)
 A cada 5 turnos, LLM sumariza episódio em JSON estruturado, persiste em world_state.
@@ -188,13 +189,17 @@ Multi-stage Dockerfiles.
 - `docker compose up` sobe API + UI + Postgres em modo dev
 - Testes de smoke passam contra API dockerizado
 
-### [ ] S5.2 — Deploy Fly.io (6 h)
-API + UI + Fly Postgres.
+### [ ] S5.2 — Deploy Fly.io + migração SQLite → Postgres (8 h, era 6)
+API + UI + **Fly Postgres**. Este é o momento planejado de trocar SQLite pra Postgres.
 **DoD:**
 - `fly.toml` para API + UI
+- Fly Postgres provisionado; `DATABASE_URL` em prod aponta pra ele
+- Rodar `alembic upgrade head` contra o Postgres remoto (schema já portátil desde S2.1, deve aplicar sem mudança)
+- Testar smoke: criar sessão, gerar 3 turnos, verificar persistência no Postgres
 - `fly deploy` sucede sem erros
 - `fly secrets set ANTHROPIC_API_KEY=... DATABASE_URL=...` — nenhuma secret em código
 - URL público responde `GET /health` com 200
+- Dev local continua com SQLite (`DATABASE_URL` no `.env` fica `sqlite:///./storyteller.db`)
 
 ### [ ] S5.3 — README (5 h)
 **DoD:**

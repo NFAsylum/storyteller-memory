@@ -63,7 +63,7 @@ Fachada sobre mem0. Isola dependência.
 - `clear()` — apaga memórias da session
 
 ### `core/memory/world_state.py`
-CRUD Postgres para estado estruturado.
+CRUD SQLAlchemy 2.0 para estado estruturado. Backend SQLite no dev, Postgres na prod (Sprint 5). Schemas usam apenas tipos portáveis (nenhum JSONB/ARRAY — `JSON` genérico só).
 
 Schemas (SQLAlchemy):
 - `characters(id, session_id, name, traits: list[str], first_appeared_turn: int, last_seen_turn: int)`

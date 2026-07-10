@@ -9,11 +9,13 @@ Projeto tocado como portfólio de TCC. Prazo ~5-6 semanas @ 20h/sem. Você (Clau
 ## Stack fixado
 
 - Python 3.11 + Poetry
-- Postgres 16 (world state estruturado) + `mem0ai` (retrieval)
+- **SQLite** (world state estruturado, dev) + `mem0ai` (retrieval)
 - FastAPI (backend) + Streamlit (frontend MVP)
 - Anthropic SDK, modelo `claude-sonnet-4-6`
 - pytest para testes
 - Deploy: Fly.io + Fly Postgres
+
+**Migração futura (Sprint 5, antes do polish final):** SQLite → Postgres 16. Feita via `DATABASE_URL` + Alembic (schemas devem ser portáveis desde o início: sem tipos Postgres-only como JSONB/ARRAY — use `JSON` genérico). O motivo de SQLite no dev é evitar overhead de infra pro Claude no container (sem docker-in-docker).
 
 Não trocar sem justificativa forte + confirmação do humano.
 

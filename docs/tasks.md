@@ -108,7 +108,7 @@ Story_loop v2 usa `RetrievalPolicy` antes de chamar LLM. Prompt inclui context b
 - Manual test de 15 turnos com Fake: reflection dispara em turns 5, 10, 15; world_state tem entries
 - Turnos 6+ visivelmente referenciam eventos anteriores via bundle (mesmo com Fake, o bundle chega no prompt)
 
-### [ ] S2.5 — Manual test estrutural (2 h)
+### [x] S2.5 — Manual test estrutural (2 h)
 End-to-end sem LLM real. Verifica que os DADOS fluem certo.
 **DoD:**
 - `scripts/manual_test_sprint2.py`: 15 turnos com Fake → verifica: tabelas populadas, reflection disparou 3x, retrieval retornou >0 items nos últimos 10 turnos
@@ -116,8 +116,8 @@ End-to-end sem LLM real. Verifica que os DADOS fluem certo.
 - Nenhum `ANTHROPIC_API_KEY` no env
 
 ### Verificação final Sprint 2
-- [ ] `pytest` inteiro verde
-- [ ] `unset ANTHROPIC_API_KEY && poetry run python scripts/manual_test_sprint2.py` roda até o fim, mostra que world_state populou
+- [x] `pytest` inteiro verde (49 testes)
+- [x] `unset ANTHROPIC_API_KEY && poetry run python scripts/manual_test_sprint2.py` roda até o fim, mostra que world_state populou
 - [ ] Estrutura de dados verificada: characters/locations/relations/story_beats existem e têm registros
 
 ---

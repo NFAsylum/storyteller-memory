@@ -8,7 +8,7 @@ Total: 110 h. Ordem sequencial dentro do sprint, mas tarefas dentro do mesmo spr
 
 ## Sprint 1 — Fundação mensurável (20 h)
 
-### [ ] S1.1 — Setup do projeto (3 h)
+### [x] S1.1 — Setup do projeto (3 h)
 Criar estrutura: Poetry, dependências, `.env.example`. **SQLite** pra dev (arquivo local); migração pra Postgres no Sprint 5.
 **DoD:**
 - `poetry install` termina sem erro

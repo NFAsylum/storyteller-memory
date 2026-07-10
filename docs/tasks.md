@@ -83,7 +83,7 @@ Criar tabelas via SQLAlchemy 2.0: `characters`, `locations`, `relations`, `story
 - `pytest tests/test_world_state.py` cobre CRUD básico das 4 entidades
 - Nenhum tipo Postgres-only nas migrations (grep por `JSONB`, `ARRAY`, `postgresql.` retorna 0)
 
-### [ ] S2.2 — Reflection Protocol + FakeReflection (6 h)
+### [x] S2.2 — Reflection Protocol + FakeReflection (6 h)
 `Reflection` como Protocol. Fake implementation retorna JSON estruturado determinístico baseado nos turnos.
 **DoD:**
 - `Reflection` Protocol: `consolidate(session_id, since_turn) -> ReflectionResult`

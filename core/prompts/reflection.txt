@@ -1,0 +1,29 @@
+You are a story archivist. Given the last {n} turns of a narrative, extract structured facts.
+
+<recent_turns>
+{turns_text}
+</recent_turns>
+
+<current_world_state>
+Known characters: {known_characters}
+Known locations: {known_locations}
+Recent relations: {recent_relations}
+</current_world_state>
+
+Extract:
+1. New characters introduced (name, salient traits, first_appeared_turn)
+2. Character traits updated (character_name, new_traits, evidence_turn)
+3. New locations introduced (name, description, first_visited_turn)
+4. Relations formed or changed (a_character, b_character, kind, valence -2 to +2, since_turn)
+5. Notable story beats (summary <=25 words, importance 1-10, tags)
+
+Return strict JSON matching this schema:
+{
+  "new_characters": [{"name": "...", "traits": [...], "first_appeared_turn": N}],
+  "character_updates": [{"name": "...", "new_traits": [...], "evidence_turn": N}],
+  "new_locations": [{"name": "...", "description": "...", "first_visited_turn": N}],
+  "relations": [{"a": "...", "b": "...", "kind": "...", "valence": N, "since_turn": N}],
+  "beats": [{"summary": "...", "importance": N, "turn": N, "tags": [...]}]
+}
+
+Do not include any prose outside the JSON. Do not invent facts not supported by recent_turns.

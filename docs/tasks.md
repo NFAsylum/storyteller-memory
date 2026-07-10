@@ -75,7 +75,7 @@ Verificar wiring end-to-end sem chamada real.
 
 Constrói mecânica de memória estruturada. Ainda com Fake — validamos estrutura, não qualidade.
 
-### [ ] S2.1 — Schema SQLite + migrations (4 h)
+### [x] S2.1 — Schema SQLite + migrations (4 h)
 Criar tabelas via SQLAlchemy 2.0: `characters`, `locations`, `relations`, `story_beats`. Alembic pra migrations. **Tipos portáveis SQLite ↔ Postgres** (`JSON` genérico, não JSONB; sem ARRAY — traits/tags como JSON list).
 **DoD:**
 - `alembic upgrade head` cria as 4 tabelas no SQLite

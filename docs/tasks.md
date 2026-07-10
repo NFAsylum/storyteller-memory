@@ -16,7 +16,7 @@ Criar estrutura: Poetry, dependências, `.env.example`. **SQLite** pra dev (arqu
 - `.env.example` lista `ANTHROPIC_API_KEY` e `DATABASE_URL=sqlite:///./storyteller.db`
 - **Não** gerar `docker-compose.yml` (dev não precisa; deploy usa Fly Postgres)
 
-### [ ] S1.2 — `core/llm_client.py` (3 h)
+### [x] S1.2 — `core/llm_client.py` (3 h)
 Wrapper Anthropic SDK com retry, timeout, cost logging.
 **DoD:**
 - `tests/test_llm_client.py` cobre: chamada sucesso, retry após 429 (mock), timeout retorna erro específico

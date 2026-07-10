@@ -57,7 +57,7 @@ Escrever `eval/scenarios/seed_01.json`, `seed_02.json`, `seed_03.json`. Cada um:
 - Cada pergunta tem `ground_truth` e `category`
 - Documentado em `eval/scenarios/README.md` como escrever novos
 
-### [ ] S1.6 — Manual test completo com Fake (3 h)
+### [x] S1.6 — Manual test completo com Fake (3 h)
 Verificar wiring end-to-end sem chamada real.
 **DoD:**
 - `scripts/manual_test.py`: cria session, roda 5 turnos com FakeLlmClient, imprime narrator_text de cada turn, imprime `mem0_adapter.list_all()` no fim
@@ -65,9 +65,9 @@ Verificar wiring end-to-end sem chamada real.
 - Roda sem `ANTHROPIC_API_KEY` no env
 
 ### Verificação final Sprint 1
-- [ ] `pytest` inteiro verde
-- [ ] `unset ANTHROPIC_API_KEY && LLM_BACKEND=fake poetry run python scripts/manual_test.py` roda até o fim, imprime 5 turnos + list_all()
-- [ ] Nenhum acesso a API real durante toda a Sprint 1
+- [x] `pytest` inteiro verde (31 testes)
+- [x] `unset ANTHROPIC_API_KEY && LLM_BACKEND=fake poetry run python scripts/manual_test.py` roda até o fim, imprime 5 turnos + list_all()
+- [x] Nenhum acesso a API real durante toda a Sprint 1
 
 ---
 

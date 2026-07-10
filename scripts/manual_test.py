@@ -1,13 +1,18 @@
-"""Manual smoke test for S1.3: run 5 consecutive story turns in one session.
+"""Manual end-to-end test (S1.6): 5 story turns in one session, fully deterministic.
 
-Runs entirely on the deterministic FakeLlmClient by default — no ANTHROPIC_API_KEY, no
-cost. Set LLM_BACKEND=anthropic (+ a real key) to exercise the real backend later.
+Runs on the deterministic FakeLlmClient by default — no ANTHROPIC_API_KEY, no cost.
+Set LLM_BACKEND=anthropic (+ a real key) to exercise the real backend later.
+
+Output is deterministic across runs: it prints narrator_text per turn (hash-seeded, so
+stable) and list_all() sorted by turn. mem0's random memory UUIDs are deliberately NOT
+printed — they are the only non-deterministic part — so repeated runs produce identical
+stdout.
 
 Requires the mem0 backend deps (sentence-transformers, faiss-cpu); the first run
 downloads the ~100MB embedder model.
 
 Run: poetry run python scripts/manual_test.py
-Expected: 5 non-empty, deterministic narrations, then list_all() showing 5 memories.
+Expected: 5 non-empty narrations, then "5 of 5 turns stored".
 """
 
 from __future__ import annotations
@@ -29,12 +34,11 @@ TURNS = [
 
 
 def main() -> int:
-    backend = os.environ.get("LLM_BACKEND", "fake")
-    print(f"LLM backend: {backend}")
+    print(f"LLM backend: {os.environ.get('LLM_BACKEND', 'fake')}")
 
     llm = create_llm_client()
     memory = Mem0Adapter(SESSION_ID)
-    # Start clean so the per-turn count is unambiguous.
+    # Start clean so the per-turn count is unambiguous and the run is repeatable.
     memory.clear()
     loop = StoryLoop(SESSION_ID, memory=memory, llm=llm)
 
@@ -45,13 +49,15 @@ def main() -> int:
         print(f"\n===== TURN {i} of {len(TURNS)} =====")
         print(f"> {user_input}\n")
         print(result.narrator_text)
-        print(f"[stored: {result.stored_memory_ids} | turn cost: ${result.cost_usd:.6f}]")
+        print(f"[memories stored this turn: {len(result.stored_memory_ids)} | turn cost: ${result.cost_usd:.6f}]")
 
     stored = memory.list_all()
     print("\n===== mem0.list_all() =====")
     print(f"{len(stored)} of {len(TURNS)} turns stored in session {SESSION_ID!r}")
-    for record in stored:
-        print(f"  - {record.id}: {record.text[:60]!r}")
+    # Sort by turn metadata so the listing is deterministic (mem0 IDs/order are not).
+    for record in sorted(stored, key=lambda r: r.metadata.get("turn", 0)):
+        turn = record.metadata.get("turn", "?")
+        print(f"  turn {turn}: {record.text[:60]!r}")
     print(f"\nTotal LLM cost: ${total_cost:.6f}")
 
     return 0 if len(stored) == len(TURNS) else 1

@@ -100,7 +100,7 @@ Bundle de contexto para próximo turn.
 - Estimativa de tokens em `token_estimate` (aproximação: 4 chars ≈ 1 token)
 - Teste: dado session seed, retorna >0 memories e >0 active_characters
 
-### [ ] S2.4 — Integrar retrieval + reflection no story_loop (4 h)
+### [x] S2.4 — Integrar retrieval + reflection no story_loop (4 h)
 Story_loop v2 usa `RetrievalPolicy` antes de chamar LLM. Prompt inclui context bundle. Reflection roda a cada 5 turnos.
 **DoD:**
 - `StoryLoop.run_turn()` chama `RetrievalPolicy.build_context()` e injeta no prompt (via FakeLlmClient)

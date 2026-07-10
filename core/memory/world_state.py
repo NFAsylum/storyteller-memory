@@ -89,3 +89,25 @@ class WorldState:
 
     def commit(self) -> None:
         self._session.commit()
+
+    def active_characters(self, session_id: str, min_last_seen_turn: int) -> list[Character]:
+        """Characters seen at or after a turn threshold (most-recently-seen first)."""
+        stmt = (
+            select(Character)
+            .where(
+                Character.session_id == session_id,
+                Character.last_seen_turn >= min_last_seen_turn,
+            )
+            .order_by(Character.last_seen_turn.desc(), Character.id)
+        )
+        return list(self._session.scalars(stmt))
+
+    def top_beats(self, session_id: str, k: int = 3) -> list[StoryBeat]:
+        """Highest-importance, most-recent story beats for the session."""
+        stmt = (
+            select(StoryBeat)
+            .where(StoryBeat.session_id == session_id)
+            .order_by(StoryBeat.importance.desc(), StoryBeat.turn.desc())
+            .limit(k)
+        )
+        return list(self._session.scalars(stmt))

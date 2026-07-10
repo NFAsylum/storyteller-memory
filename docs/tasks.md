@@ -93,7 +93,7 @@ Criar tabelas via SQLAlchemy 2.0: `characters`, `locations`, `relations`, `story
 - Prompt template em `core/prompts/reflection.txt` (usado só na Sprint 3)
 - 5 testes: turnos vazios, turnos com 1 personagem, turnos com múltiplos, evento repetido não duplica, ReflectionResult tem contagens não-negativas
 
-### [ ] S2.3 — `core/memory/retrieval_policy.py` (4 h)
+### [x] S2.3 — `core/memory/retrieval_policy.py` (4 h)
 Bundle de contexto para próximo turn.
 **DoD:**
 - `RetrievalPolicy.build_context(session_id, turn, user_input)` retorna `ContextBundle` com 4 chaves populadas

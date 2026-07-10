@@ -30,6 +30,8 @@ Turn manager mínimo: input → LLM → armazena em mem0 (sem world state ainda)
 - Script `scripts/manual_test.py` roda 5 turnos consecutivos numa session, prints legíveis
 - Cada turn escreve entrada correspondente em mem0 (verificado via `mem0_adapter.list_all()`)
 
+> **Status: código pronto, verificação PENDENTE.** Implementado `core/memory/mem0_adapter.py`, `core/story_loop.py`, `core/prompts/story_continuation.txt`, `scripts/manual_test.py` + 10 testes unitários verdes (LLM e mem0 mockados). Os 3 critérios do DoD exigem chamada LLM real — rodar `poetry run python scripts/manual_test.py` no devbox com `ANTHROPIC_API_KEY` e conferir 5 narrações + `list_all()` = 5. Backend mem0: Anthropic LLM + embedder HuggingFace local + FAISS local (deps `sentence-transformers`/`faiss-cpu` no pyproject; 1º run baixa modelo ~100MB). Não marcar `[x]` até rodar.
+
 ### [ ] S1.4 — `eval/harness.py` v1 (6 h)
 Carrega scenario JSON, roda N turnos, faz M perguntas, retorna métricas.
 **DoD:**

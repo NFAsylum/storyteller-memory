@@ -41,7 +41,7 @@ Turn manager mínimo: input → LLM (via Protocol) → armazena em mem0.
 - Cada turn escreve entrada correspondente em mem0 (verificado via `mem0_adapter.list_all()` = 5 depois de 5 turnos)
 - Testes com Fake substituem os mocks manuais (mais robusto)
 
-### [ ] S1.4 — Scenario/Question Pydantic models + loader (3 h)
+### [x] S1.4 — Scenario/Question Pydantic models + loader (3 h)
 Modelos pra representar cenários de teste. Ainda sem harness — só shape.
 **DoD:**
 - `Scenario` Pydantic model: `id, scenes: list[Scene], questions: list[Question]`

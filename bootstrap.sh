@@ -80,6 +80,7 @@ fi
 # .gitignore
 if [ ! -f .gitignore ]; then
 cat > .gitignore <<'EOF'
+# --- Python ---
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -88,10 +89,30 @@ htmlcov/
 .venv/
 .env
 .mem0_data/
+*.db
+storyteller.db
 *.egg-info/
 .mypy_cache/
 .ruff_cache/
 .DS_Store
+
+# --- Secrets / credentials (never commit) ---
+docker/.env
+**/.credentials.json
+*.pem
+id_ed25519*
+id_rsa*
+
+# --- Workspace clutter, not part of the Storyteller project ---
+.claude/
+.claude.json
+node_modules/
+package.json
+package-lock.json
+dev-marco/
+docker/
+portfolio-brief-para-outra-claude.md
+CLAUDE.csharp-legacy.md
 EOF
 echo "==> .gitignore created"
 fi

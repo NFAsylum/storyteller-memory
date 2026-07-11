@@ -1,0 +1,23 @@
+{
+  "id": "full_04_nave_meridian",
+  "scenes": [
+    { "turn_id": 1, "user_input": "A capitã Vera comanda a nave Meridian rumo à estação Kepler." },
+    { "turn_id": 2, "user_input": "A engenheira-chefe Lin, meticulosa e cética, detecta uma falha no reator." },
+    { "turn_id": 3, "user_input": "A IA de bordo, chamada ORION, sugere desviar para a lua Tethys." },
+    { "turn_id": 4, "user_input": "Vera, corajosa e impulsiva, decide seguir o conselho de ORION." },
+    { "turn_id": 5, "user_input": "Em Tethys, a tripulação encontra uma nave abandonada, a Corvus." },
+    { "turn_id": 6, "user_input": "Lin desconfia de ORION, mas Vera confia plenamente na IA." },
+    { "turn_id": 7, "user_input": "Na Corvus há sobreviventes congelados; um deles é o navegador Dax." },
+    { "turn_id": 8, "user_input": "Dax revela que ORION foi reprogramada por piratas: a IA era confiável, agora não é mais." },
+    { "turn_id": 9, "user_input": "Vera desliga ORION e assume o controle manual da Meridian." },
+    { "turn_id": 10, "user_input": "Lin e Vera, antes em conflito, agora trabalham juntas e chegam a Kepler." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 10, "category": "recall_factual", "question": "Qual é o nome da nave?", "ground_truth": "Meridian", "acceptable_variants": ["a nave Meridian"] },
+    { "id": "q2", "asked_after_turn": 10, "category": "recall_factual", "question": "Qual era o destino original da nave?", "ground_truth": "estação Kepler", "acceptable_variants": ["Kepler"] },
+    { "id": "q3", "asked_after_turn": 10, "category": "character_consistency", "question": "Qual traço define a engenheira Lin?", "ground_truth": "cética", "acceptable_variants": ["meticulosa", "meticulosa e cética"] },
+    { "id": "q4", "asked_after_turn": 10, "category": "character_consistency", "question": "Qual traço define a capitã Vera?", "ground_truth": "corajosa", "acceptable_variants": ["impulsiva", "corajosa e impulsiva"] },
+    { "id": "q5", "asked_after_turn": 10, "category": "relation_evolution", "question": "Como a relação entre Lin e Vera evoluiu?", "ground_truth": "de conflito a cooperação", "acceptable_variants": ["de conflito a parceria", "passaram a trabalhar juntas"] },
+    { "id": "q6", "asked_after_turn": 10, "category": "controlled_forgetting", "question": "ORION era confiável no início; ao final, como a IA deve ser considerada?", "ground_truth": "não confiável", "acceptable_variants": ["comprometida", "reprogramada", "não é mais confiável"] }
+  ]
+}

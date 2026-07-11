@@ -184,7 +184,7 @@ Rodar harness com Anthropic real. Escrever `results.md`.
 
 ## Sprint 4 — Iteração + harness expandido (20 h)
 
-### [ ] S4.1 — Expandir para 30 perguntas / 5 cenários (6 h)
+### [x] S4.1 — Expandir para 30 perguntas / 5 cenários (6 h)
 Cobrir 5 categorias:
 - `recall_factual` (10)
 - `character_consistency` (6)

@@ -199,6 +199,8 @@ Cobrir 5 categorias:
 - `poetry run python -m eval.count_questions` retorna 30
 
 ### [ ] S4.2 — Judges subjetivos (6 h)
+
+> **Parcial (decisão C, 2026-07-11):** `judge_consistency(character_profile, response) -> float [0,1]` implementado + testado (mock). A **calibração** (`judges_calibration.json` com scores humanos + `calibrate_judges` + gate >80%) fica **adiada** até Marco fornecer os scores humanos de referência. Não marcar [x] até calibrar.
 Expandir `judges.py` com consistency + hallucination detection subjetiva.
 **DoD:**
 - `judge_consistency(character_profile, response) -> float [0,1]`

@@ -42,6 +42,15 @@ def test_judge_hallucination_parses_bool(reply: str, expected: bool) -> None:
     assert _judge_returning(reply).judge_hallucination("Aria", "some response") is expected
 
 
+@pytest.mark.parametrize(
+    ("reply", "expected"),
+    [("0.9", 0.9), ("0.1", 0.1), ("Score: 0.75", 0.75), ("1.5", 1.0), ("garbage", 0.0)],
+)
+def test_judge_consistency_parses_and_clamps(reply: str, expected: float) -> None:
+    profile = {"name": "Aria", "traits": ["leal", "corajosa"], "relations": [], "backstory": ""}
+    assert _judge_returning(reply).judge_consistency(profile, "Aria trai o rei.") == expected
+
+
 def test_judge_recall_fills_prompt_with_ground_truth() -> None:
     llm = MagicMock()
     llm.generate.return_value = LlmResponse(

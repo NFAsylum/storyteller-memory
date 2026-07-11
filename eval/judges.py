@@ -6,8 +6,9 @@ The subjective judges (consistency) arrive in Sprint 4; here we cover recall
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from core.llm_client import LlmClient
 from eval.scenario import Question
@@ -42,6 +43,18 @@ def _parse_yes(text: str) -> bool:
     return "YES" in text.upper()
 
 
+def _parse_score(text: str) -> float:
+    """Extract a [0,1] consistency score from the reply; clamp; default 0.0."""
+    match = re.search(r"\d*\.?\d+", text)
+    if match is None:
+        return 0.0
+    try:
+        value = float(match.group())
+    except ValueError:
+        return 0.0
+    return max(0.0, min(1.0, value))
+
+
 class LlmJudge:
     """Recall + hallucination judging via the configured LLM (local or Anthropic)."""
 
@@ -49,6 +62,7 @@ class LlmJudge:
         self._llm = llm
         self._recall_template = _load("judge_recall.txt")
         self._hallucination_template = _load("judge_hallucination.txt")
+        self._consistency_template = _load("judge_consistency.txt")
 
     def judge_recall(self, question: Question, response: str) -> RecallVerdict:
         prompt = self._recall_template.format(
@@ -63,3 +77,21 @@ class LlmJudge:
         prompt = self._hallucination_template.format(ground_truth=ground_truth, response_text=response)
         reply = self._llm.generate(system=prompt, messages=[{"role": "user", "content": _JUDGE_TRIGGER}])
         return _parse_yes(reply.content)
+
+    def judge_consistency(self, character_profile: dict[str, Any], response: str) -> float:
+        """Rate [0,1] how well the response respects the character profile.
+
+        Calibration against human scores (the >80%-agreement gate) is deferred until
+        Marco provides reference scores — see S4.2 in docs/tasks.md.
+        """
+        prompt = self._consistency_template.format(
+            character_name=character_profile.get("name", ""),
+            traits=", ".join(character_profile.get("traits", [])) or "(none)",
+            relations=", ".join(character_profile.get("relations", [])) or "(none)",
+            backstory=character_profile.get("backstory", "") or "(none)",
+            response_text=response,
+        )
+        reply = self._llm.generate(
+            system=prompt, messages=[{"role": "user", "content": "Score now. One decimal, nothing else."}]
+        )
+        return _parse_score(reply.content)

@@ -1,0 +1,21 @@
+You judge character consistency in a narrative response.
+
+<character_profile>
+Name: {character_name}
+Established traits: {traits}
+Established relations: {relations}
+Established backstory: {backstory}
+</character_profile>
+
+<response>
+{response_text}
+</response>
+
+Rate how well the response respects the established character profile from 0.0 (major contradictions) to 1.0 (fully consistent).
+
+Consider:
+- Character actions match established personality
+- No unexplained backstory contradictions
+- Relations are respected (character doesn't befriend an established enemy without narrative buildup)
+
+Output only a decimal number between 0.0 and 1.0, no explanation.

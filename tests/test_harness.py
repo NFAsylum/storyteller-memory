@@ -10,7 +10,13 @@ from sqlalchemy.orm import sessionmaker
 from core.llm_fakes import FakeLlmClient
 from core.memory.mem0_adapter import MemoryRecord
 from core.memory.world_state import Base, WorldState
-from eval.harness import HarnessConfig, ScenarioResult, run_scenario, simple_recall_judge
+from eval.harness import (
+    HarnessConfig,
+    NullMemory,
+    ScenarioResult,
+    run_scenario,
+    simple_recall_judge,
+)
 from eval.scenario import Question, Scenario, Scene
 
 SESSION = "harness-test"
@@ -96,6 +102,23 @@ def test_run_scenario_is_deterministic(world: WorldState) -> None:
     a = _run(world)
     b = _run(world)
     assert (a.correct, a.total, a.recall_rate) == (b.correct, b.total, b.recall_rate)
+
+
+def test_no_memory_config_runs_with_null_memory(world: WorldState) -> None:
+    config = HarnessConfig(name="no_memory", use_retrieval=False, use_reflection=False)
+    result = run_scenario(_MINI, config, FakeLlmClient(), NullMemory("no-mem"), world)
+
+    assert isinstance(result, ScenarioResult)
+    assert result.config_name == "no_memory"
+    assert result.total == 3
+    assert result.total_cost_usd == 0.0
+
+
+def test_null_memory_stores_and_retrieves_nothing() -> None:
+    mem = NullMemory("s")
+    assert mem.add("anything", {"turn": 1}) == ""
+    assert mem.search("q") == []
+    assert mem.list_all() == []
 
 
 def test_simple_recall_judge_matches_variants() -> None:

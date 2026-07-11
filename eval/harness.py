@@ -37,6 +37,29 @@ class _Memory(Protocol):
     def clear(self) -> None: ...
 
 
+class NullMemory:
+    """No-op memory for the 'no_memory' config: stores nothing, retrieves nothing.
+
+    This gives the true no-memory baseline — the LLM answers each question with no
+    prior context at all (the portfolio's "without memory" number).
+    """
+
+    def __init__(self, session_id: str) -> None:
+        self.session_id = session_id
+
+    def add(self, text: str, metadata: dict[str, Any] | None = None) -> str:
+        return ""
+
+    def search(self, query: str, top_k: int = 5) -> list[Any]:
+        return []
+
+    def list_all(self) -> list[Any]:
+        return []
+
+    def clear(self) -> None:
+        return None
+
+
 @dataclass(frozen=True)
 class HarnessConfig:
     name: str

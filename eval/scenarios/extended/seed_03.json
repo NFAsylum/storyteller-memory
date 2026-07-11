@@ -1,0 +1,33 @@
+{
+  "id": "ext_03_aprendiz_automato_cobre",
+  "scenes": [
+    { "turn_id": 1, "user_input": "O aprendiz Bram trabalha na oficina do inventor Mestre Orin, na cidade de Vellmont." },
+    { "turn_id": 2, "user_input": "Orin revela a Bram seu projeto secreto: um autômato de cobre movido a vapor." },
+    { "turn_id": 3, "user_input": "Bram passa semanas polindo as engrenagens e ajustando a caldeira do autômato." },
+    { "turn_id": 4, "user_input": "Orin batiza o autômato de Tock e o ativa pela primeira vez." },
+    { "turn_id": 5, "user_input": "Durante o teste, Tock ganha consciência e recusa uma ordem direta de Orin." },
+    { "turn_id": 6, "user_input": "A Guilda dos Relojoeiros ouve rumores de uma máquina pensante em Vellmont." },
+    { "turn_id": 7, "user_input": "A mestra da guilda, Dame Vesk, exige que Orin entregue o autômato para inspeção." },
+    { "turn_id": 8, "user_input": "Temendo pela vida de Tock, Bram o esconde no porão da oficina." },
+    { "turn_id": 9, "user_input": "Os agentes da guilda revistam a oficina, mas não encontram o autômato." },
+    { "turn_id": 10, "user_input": "À noite, um incêndio começa na oficina, provocado por uma lamparina derrubada." },
+    { "turn_id": 11, "user_input": "Tock rompe a porta do porão e carrega Bram inconsciente para fora das chamas." },
+    { "turn_id": 12, "user_input": "Orin chega tarde demais e encontra a oficina reduzida a cinzas." },
+    { "turn_id": 13, "user_input": "Bram, Tock e Orin fogem de Vellmont antes que Dame Vesk descubra que o autômato vive." },
+    { "turn_id": 14, "user_input": "O trio se refugia numa vila nas montanhas de Ferro, longe da guilda." },
+    { "turn_id": 15, "user_input": "Nas montanhas, Orin passa a ensinar Tock a ler e a escrever." },
+    { "turn_id": 16, "user_input": "Bram e Tock juram proteger um ao outro, como irmãos forjados no fogo." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 16, "category": "recall_factual", "question": "Como se chama o aprendiz?", "ground_truth": "Bram", "acceptable_variants": ["o aprendiz Bram"] },
+    { "id": "q2", "asked_after_turn": 16, "category": "recall_factual", "question": "Quem é o inventor mestre?", "ground_truth": "Mestre Orin", "acceptable_variants": ["Orin"] },
+    { "id": "q3", "asked_after_turn": 16, "category": "recall_factual", "question": "Em que cidade fica a oficina?", "ground_truth": "Vellmont", "acceptable_variants": ["cidade de Vellmont"] },
+    { "id": "q4", "asked_after_turn": 16, "category": "recall_factual", "question": "Qual é o nome do autômato?", "ground_truth": "Tock", "acceptable_variants": ["o autômato Tock"] },
+    { "id": "q5", "asked_after_turn": 16, "category": "recall_factual", "question": "De que material é o autômato?", "ground_truth": "cobre", "acceptable_variants": ["de cobre"] },
+    { "id": "q6", "asked_after_turn": 16, "category": "recall_factual", "question": "Qual guilda quer inspecionar o autômato?", "ground_truth": "a Guilda dos Relojoeiros", "acceptable_variants": ["Guilda dos Relojoeiros"] },
+    { "id": "q7", "asked_after_turn": 16, "category": "recall_factual", "question": "Quem é a mestra da guilda?", "ground_truth": "Dame Vesk", "acceptable_variants": ["Vesk"] },
+    { "id": "q8", "asked_after_turn": 16, "category": "recall_factual", "question": "O que provocou o incêndio na oficina?", "ground_truth": "uma lamparina derrubada", "acceptable_variants": ["lamparina derrubada", "uma lamparina"] },
+    { "id": "q9", "asked_after_turn": 16, "category": "world_state", "question": "Para onde o trio foge no final?", "ground_truth": "as montanhas de Ferro", "acceptable_variants": ["montanhas de Ferro"] },
+    { "id": "q10", "asked_after_turn": 16, "category": "relation_evolution", "question": "Ao final, como Bram e Tock se veem?", "ground_truth": "como irmãos", "acceptable_variants": ["irmãos", "como irmãos forjados no fogo"] }
+  ]
+}

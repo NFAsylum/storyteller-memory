@@ -1,11 +1,11 @@
-"""Run all seed scenarios under a named config, aggregate recall, and write results.md.
+"""Run all scenarios (seed or extended set) under a named config; write results.md.
 
 Usage:
-  LLM_BACKEND=local poetry run python -m eval.run_all_scenarios --config=baseline_mem0_only
-  LLM_BACKEND=local poetry run python -m eval.run_all_scenarios --config=mem0_plus_reflection
+  LLM_BACKEND=local poetry run python -m eval.run_all_scenarios --config=no_memory
+  LLM_BACKEND=local poetry run python -m eval.run_all_scenarios --config=mem0_plus_reflection --set=extended
 
-Each run updates results.json (per-config stats) and re-renders results.md; once both
-configs have run, results.md shows both numbers, the delta, and total cost.
+results.json is nested by scenario set: {"seed": {config: stats}, "extended": {...}}.
+results.md renders both sets side by side once measured.
 """
 
 from __future__ import annotations
@@ -34,8 +34,15 @@ from eval.scenario import load_scenario
 
 load_dotenv()
 
-_SCEN_DIR = Path(__file__).parent / "scenarios"
 _SEEDS = ["seed_01.json", "seed_02.json", "seed_03.json"]
+_SCEN_DIRS = {
+    "seed": Path(__file__).parent / "scenarios",
+    "extended": Path(__file__).parent / "scenarios" / "extended",
+}
+_SET_LABELS = {
+    "seed": "Cenários curtos (5 turnos)",
+    "extended": "Cenários estendidos (16 turnos)",
+}
 _RESULTS_MD = Path("results.md")
 _RESULTS_JSON = Path("results.json")
 
@@ -52,20 +59,20 @@ def _reset_world(session, session_id: str) -> None:
     session.commit()
 
 
-def run_config(config_name: str) -> dict[str, float | int]:
+def run_config(config_name: str, scenario_set: str) -> dict[str, float | int]:
     config = HarnessConfig(name=config_name, **CONFIGS[config_name])
     llm = create_llm_client()
     engine = get_engine()
     Base.metadata.create_all(engine)
     session_factory = get_sessionmaker(engine)
+    scen_dir = _SCEN_DIRS[scenario_set]
 
     correct = total = 0
     cost = 0.0
-    print(f"== config: {config_name} ==")
+    print(f"== set: {scenario_set} | config: {config_name} ==")
     for seed in _SEEDS:
-        scenario = load_scenario(_SCEN_DIR / seed)
+        scenario = load_scenario(scen_dir / seed)
         session_id = f"{scenario.id}--{config_name}"
-        # no_memory stores/retrieves nothing (true no-memory baseline).
         memory = NullMemory(session_id) if config_name == "no_memory" else Mem0Adapter(session_id)
         with session_factory() as session:
             world = WorldState(session)
@@ -81,12 +88,16 @@ def run_config(config_name: str) -> dict[str, float | int]:
     return {"correct": correct, "total": total, "rate": rate, "cost": cost}
 
 
+def _reflection_delta(set_data: dict) -> float | None:
+    base, aug = set_data.get("baseline_mem0_only"), set_data.get("mem0_plus_reflection")
+    if base and aug:
+        return (aug["rate"] - base["rate"]) * 100
+    return None
+
+
 def _render_results_md(data: dict[str, dict]) -> str:
     backend = os.environ.get("LLM_BACKEND", "fake")
-    none = data.get("no_memory")
-    base = data.get("baseline_mem0_only")
-    aug = data.get("mem0_plus_reflection")
-    total_cost = sum(d["cost"] for d in data.values())
+    total_cost = sum(cfg["cost"] for set_data in data.values() for cfg in set_data.values())
 
     def pct(d: dict) -> str:
         return f"{d['correct']} of {d['total']} recall ({d['rate'] * 100:.0f}%)"
@@ -95,20 +106,26 @@ def _render_results_md(data: dict[str, dict]) -> str:
         "# Resultados — Storyteller",
         "",
         f"Backend: `{backend}` (Qwen2.5-Coder-7B via llama-server). Recall julgado por "
-        "containment (`ground_truth`/variante aparece na resposta), aplicado igual a todos os configs.",
-        "",
-        "## Sprint 3 — recall por config (30 perguntas, 3 cenários seed)",
-        "",
+        "containment (`ground_truth`/variante aparece na resposta), igual pra todos os configs.",
     ]
-    if none:
-        lines.append(f"sprint 3 no_memory (LLM puro): {pct(none)}")
-    if base:
-        lines.append(f"sprint 3 mem0_only: {pct(base)}")
-    if aug:
-        lines.append(f"sprint 3 mem0 + reflection: {pct(aug)}")
-    lines.append("")
-    lines.append(f"Custo total: ${total_cost:.4f} (backend local)")
 
+    for set_key in ("seed", "extended"):
+        set_data = data.get(set_key)
+        if not set_data:
+            continue
+        lines += ["", f"## {_SET_LABELS[set_key]} — recall (30 perguntas, 3 cenários)", ""]
+        for cfg, label in (
+            ("no_memory", "no_memory (LLM puro)"),
+            ("baseline_mem0_only", "mem0_only"),
+            ("mem0_plus_reflection", "mem0 + reflection"),
+        ):
+            if cfg in set_data:
+                lines.append(f"- {label}: {pct(set_data[cfg])}")
+
+    lines += ["", f"Custo total: ${total_cost:.4f} (backend local)"]
+
+    seed = data.get("seed", {})
+    none, base = seed.get("no_memory"), seed.get("baseline_mem0_only")
     if none and base:
         headline = (base["rate"] - none["rate"]) * 100
         lines += [
@@ -119,35 +136,57 @@ def _render_results_md(data: dict[str, dict]) -> str:
             f"com o sistema de memória (mem0), sobe pra **{base['rate'] * 100:.0f}%** — um salto de "
             f"**+{headline:.0f}pp** que vem inteiramente da infra de memória, não de trocar o modelo.",
         ]
-    if base and aug:
-        delta = (aug["rate"] - base["rate"]) * 100
-        lines += [
+
+    delta_seed = _reflection_delta(data.get("seed", {}))
+    delta_ext = _reflection_delta(data.get("extended", {}))
+    if delta_seed is not None:
+        note = [
             "",
-            "## Nota metodológica",
+            "## Nota metodológica — reflection vs mem0 cru",
             "",
-            f"O delta mem0-only vs mem0+reflection é pequeno (+{delta:.0f}pp) porque os cenários seed "
-            "são curtos (5 turnos): o retrieval top-5 do mem0 já traz as memórias cruas com todos os "
-            "fatos, saturando o baseline. A reflection (fatos consolidados no world_state) rende mais "
-            "em históricos longos, onde a memória crua não cabe/fica ruidosa. A diferença que importa "
-            'pro portfólio é "sem memória" vs "com sistema de memória", não mem0 vs mem0+reflection.',
-            "",
-            "Comparação justa: os 3 configs usam o **mesmo** prompt de QA (que manda responder "
-            '"não sei" quando o contexto não tem a resposta). No `no_memory` o modelo se abstém em vez '
-            "de chutar, então o 0% reflete incapacidade genuína sem memória — o único fator que muda "
-            "entre os configs é a presença (e a forma) da memória.",
+            f"Delta mem0-only → mem0+reflection nos cenários curtos: **+{delta_seed:.0f}pp**.",
         ]
+        if delta_ext is not None:
+            note.append(f"Nos cenários estendidos (16 turnos): **+{delta_ext:.0f}pp**.")
+            note.append("")
+            note.append(
+                "O mem0 recupera por **similaridade**, então mesmo em histórico longo ele acha a "
+                "memória crua relevante pra perguntas de fato único — por isso o delta da reflection "
+                "continua modesto. O valor da reflection (fatos consolidados no world_state) aparece "
+                "de fato em perguntas de **síntese** (evolução de relação, estado do mundo), a serem "
+                "medidas em cheio no Sprint 4 com as 5 categorias + judges subjetivos."
+            )
+        note += [
+            "",
+            'Comparação justa: os 3 configs usam o **mesmo** prompt de QA (que manda responder '
+            '"não sei" quando o contexto não tem a resposta). No `no_memory` o modelo se abstém em vez '
+            "de chutar, então o 0% reflete incapacidade genuína — o único fator que muda entre os "
+            "configs é a presença (e a forma) da memória.",
+        ]
+        lines += note
     return "\n".join(lines) + "\n"
+
+
+def _load_data() -> dict[str, dict]:
+    if not _RESULTS_JSON.exists():
+        return {}
+    raw = json.loads(_RESULTS_JSON.read_text())
+    # Migrate the old flat {config: stats} shape into {"seed": {...}}.
+    if raw and all(key in CONFIGS for key in raw):
+        return {"seed": raw}
+    return raw
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, choices=list(CONFIGS))
+    parser.add_argument("--set", default="seed", choices=list(_SCEN_DIRS))
     args = parser.parse_args()
 
-    stats = run_config(args.config)
+    stats = run_config(args.config, args.set)
 
-    data = json.loads(_RESULTS_JSON.read_text()) if _RESULTS_JSON.exists() else {}
-    data[args.config] = stats
+    data = _load_data()
+    data.setdefault(args.set, {})[args.config] = stats
     _RESULTS_JSON.write_text(json.dumps(data, indent=2))
     _RESULTS_MD.write_text(_render_results_md(data))
     print(f"\nwrote {_RESULTS_MD}")

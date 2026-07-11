@@ -1,0 +1,33 @@
+{
+  "id": "ext_02_caravana_deserto_khareth",
+  "scenes": [
+    { "turn_id": 1, "user_input": "A mercadora Seline lidera uma caravana de especiarias pelo deserto de Khareth rumo à cidade de Qadir." },
+    { "turn_id": 2, "user_input": "O guia beduíno Tarek avisa Seline sobre uma tempestade de areia se formando ao sul." },
+    { "turn_id": 3, "user_input": "A tempestade separa Seline do resto da caravana e de Tarek." },
+    { "turn_id": 4, "user_input": "Sozinha, Seline encontra um oásis guardado por uma velha eremita chamada Nima." },
+    { "turn_id": 5, "user_input": "Nima oferece água a Seline e adverte que bandidos rondam a rota principal." },
+    { "turn_id": 6, "user_input": "Nima revela que a única passagem segura para Qadir é o desfiladeiro das Serpentes." },
+    { "turn_id": 7, "user_input": "Seline parte ao amanhecer levando um cantil e um mapa desenhado por Nima." },
+    { "turn_id": 8, "user_input": "No desfiladeiro, Seline reencontra Tarek, ferido mas vivo, escondido entre as rochas." },
+    { "turn_id": 9, "user_input": "Tarek conta que o bandido Rashid emboscou a caravana e roubou parte das especiarias." },
+    { "turn_id": 10, "user_input": "Seline e Tarek seguem as pegadas de Rashid até um acampamento na cratera seca." },
+    { "turn_id": 11, "user_input": "No acampamento, Seline reconhece suas especiarias marcadas com o selo da casa dela." },
+    { "turn_id": 12, "user_input": "Seline propõe a Rashid um acordo: metade do lucro em Qadir em troca das especiarias." },
+    { "turn_id": 13, "user_input": "Rashid, cansado de fugir, aceita o acordo e escolta a caravana pelo resto do caminho." },
+    { "turn_id": 14, "user_input": "Chegando a Qadir, Seline vende as especiarias ao mercador-mestre Halim por um bom preço." },
+    { "turn_id": 15, "user_input": "Seline cumpre o acordo e paga a Rashid a parte combinada diante de Halim." },
+    { "turn_id": 16, "user_input": "Grato, Tarek aceita o convite de Seline para ser sócio permanente da caravana." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 16, "category": "recall_factual", "question": "Quem lidera a caravana?", "ground_truth": "Seline", "acceptable_variants": ["a mercadora Seline"] },
+    { "id": "q2", "asked_after_turn": 16, "category": "recall_factual", "question": "Por qual deserto passa a caravana?", "ground_truth": "Khareth", "acceptable_variants": ["deserto de Khareth"] },
+    { "id": "q3", "asked_after_turn": 16, "category": "recall_factual", "question": "Qual é a cidade de destino?", "ground_truth": "Qadir", "acceptable_variants": ["cidade de Qadir"] },
+    { "id": "q4", "asked_after_turn": 16, "category": "recall_factual", "question": "Como se chama o guia beduíno?", "ground_truth": "Tarek", "acceptable_variants": ["o beduíno Tarek"] },
+    { "id": "q5", "asked_after_turn": 16, "category": "recall_factual", "question": "Quem guarda o oásis?", "ground_truth": "Nima", "acceptable_variants": ["a eremita Nima"] },
+    { "id": "q6", "asked_after_turn": 16, "category": "recall_factual", "question": "Qual é a única passagem segura para Qadir?", "ground_truth": "o desfiladeiro das Serpentes", "acceptable_variants": ["desfiladeiro das Serpentes"] },
+    { "id": "q7", "asked_after_turn": 16, "category": "recall_factual", "question": "Qual bandido emboscou a caravana?", "ground_truth": "Rashid", "acceptable_variants": ["o bandido Rashid"] },
+    { "id": "q8", "asked_after_turn": 16, "category": "recall_factual", "question": "A quem Seline vendeu as especiarias em Qadir?", "ground_truth": "Halim", "acceptable_variants": ["o mercador-mestre Halim"] },
+    { "id": "q9", "asked_after_turn": 16, "category": "relation_evolution", "question": "Como a relação entre Seline e Rashid mudou ao longo da história?", "ground_truth": "de inimigos a sócios", "acceptable_variants": ["de bandido a parceiro", "viraram sócios", "de inimigo a aliado"] },
+    { "id": "q10", "asked_after_turn": 16, "category": "world_state", "question": "Ao final, qual passa a ser o papel de Tarek na caravana?", "ground_truth": "sócio permanente", "acceptable_variants": ["sócio da caravana", "sócio"] }
+  ]
+}

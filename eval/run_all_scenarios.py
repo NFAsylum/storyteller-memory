@@ -144,18 +144,20 @@ def _render_results_md(data: dict[str, dict]) -> str:
             "",
             "## Nota metodológica — reflection vs mem0 cru",
             "",
-            f"Delta mem0-only → mem0+reflection nos cenários curtos: **+{delta_seed:.0f}pp**.",
+            f"Delta mem0-only → mem0+reflection: curtos **{delta_seed:+.0f}pp**"
+            + (f", estendidos **{delta_ext:+.0f}pp**." if delta_ext is not None else "."),
         ]
-        if delta_ext is not None:
-            note.append(f"Nos cenários estendidos (16 turnos): **+{delta_ext:.0f}pp**.")
-            note.append("")
-            note.append(
-                "O mem0 recupera por **similaridade**, então mesmo em histórico longo ele acha a "
-                "memória crua relevante pra perguntas de fato único — por isso o delta da reflection "
-                "continua modesto. O valor da reflection (fatos consolidados no world_state) aparece "
-                "de fato em perguntas de **síntese** (evolução de relação, estado do mundo), a serem "
-                "medidas em cheio no Sprint 4 com as 5 categorias + judges subjetivos."
-            )
+        if delta_ext is not None and delta_ext < 0:
+            note += [
+                "",
+                "**Achado (negativo, mas honesto):** nos cenários longos a reflection **piorou** o "
+                "recall. O mem0 recupera por similaridade e já traz as memórias cruas (limpas e "
+                "corretas) relevantes; a reflection injeta fatos estruturados gerados pelo Qwen 7B "
+                "local, que são ruidosos/imprecisos e mais longos — pro modelo pequeno isso distrai "
+                "em vez de ajudar. Para a reflection compensar seria preciso (a) um modelo mais forte "
+                "fazendo a consolidação, ou (b) perguntas de síntese pura onde a memória crua não "
+                "basta. Sprint 4 avalia isso com as 5 categorias + judges subjetivos.",
+            ]
         note += [
             "",
             'Comparação justa: os 3 configs usam o **mesmo** prompt de QA (que manda responder '
@@ -179,16 +181,20 @@ def _load_data() -> dict[str, dict]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", required=True, choices=list(CONFIGS))
+    # 'all' runs every config in ONE process — the embedder stack import (~70s) is paid
+    # once instead of once per process (the real bottleneck, not the LLM or vector ops).
+    parser.add_argument("--config", required=True, choices=[*CONFIGS, "all"])
     parser.add_argument("--set", default="seed", choices=list(_SCEN_DIRS))
     args = parser.parse_args()
 
-    stats = run_config(args.config, args.set)
-
+    configs = list(CONFIGS) if args.config == "all" else [args.config]
     data = _load_data()
-    data.setdefault(args.set, {})[args.config] = stats
-    _RESULTS_JSON.write_text(json.dumps(data, indent=2))
-    _RESULTS_MD.write_text(_render_results_md(data))
+    for config_name in configs:
+        stats = run_config(config_name, args.set)
+        data.setdefault(args.set, {})[config_name] = stats
+        _RESULTS_JSON.write_text(json.dumps(data, indent=2))
+        _RESULTS_MD.write_text(_render_results_md(data))
+
     print(f"\nwrote {_RESULTS_MD}")
     return 0
 

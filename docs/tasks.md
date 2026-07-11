@@ -126,13 +126,15 @@ End-to-end sem LLM real. Verifica que os DADOS fluem certo.
 
 Onde plugamos Anthropic real e rodamos o primeiro baseline mensurável. Se você (marco) ainda não tem API key, esse é o momento — instância vai parar aqui e escalar.
 
-### [ ] S3.1 — Validar AnthropicLlmClient + config switch (3 h)
+### [x] S3.1 — Validar AnthropicLlmClient + config switch (3 h)
 Wrapper já existe (S1.2). Aqui garantimos que roda contra API real com key válida.
 **DoD:**
 - `LLM_BACKEND=anthropic ANTHROPIC_API_KEY=sk-ant-... poetry run python scripts/smoke_llm.py "hello"` retorna resposta real
 - Custo logado no output (~$0.001)
 - Rate limit (429) faz backoff automático
 - Timeout config funcional
+
+> **Adaptado pro backend local (inbox 2026-07-11):** Sprint 3 roda com `LLM_BACKEND=local`. Validado com `scripts/smoke_llm.py` (genérico, agnóstico de backend) → resposta real do Qwen ("Blue.", ~5s, cost $0). Config switch fake/anthropic/local + inválido coberto no factory. O 429-backoff e o timeout→`LlmTimeoutError` do `AnthropicLlmClient` seguem cobertos pelos unit tests do S1.2 (wrapper inalterado). Rodar contra Anthropic real (custo ~$0.001) fica opcional pra quando houver key paga.
 
 ### [ ] S3.2 — `AnthropicReflection` (4 h)
 Impl real de `Reflection` Protocol. Prompt em `core/prompts/reflection.txt` gera JSON estruturado.

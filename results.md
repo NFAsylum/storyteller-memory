@@ -1,6 +1,8 @@
 # Resultados — Storyteller
 
-Backend: `local` (Qwen2.5-Coder-7B via llama-server). Recall julgado por containment (`ground_truth`/variante aparece na resposta), igual pra todos os configs.
+Backend: `local` (Qwen2.5-Coder-7B via llama-server; `temperature=0`, `seed=42`). Recall julgado por containment com **word boundary** (`\b<ground_truth>\b`) + strip de pontuação — correção F1.1 do audit; antes era substring ingênua (`'Vex'` batia em `'Vexado'`). Mesmo judge pra todos os configs.
+
+> **Números corrigidos pós-audit (F1.1):** os valores abaixo já usam o judge com word boundary. Na versão anterior (substring ingênua) os números eram: cenários curtos no_memory 0% / mem0_only 90% / mem0+reflection 93%; estendidos 0% / 80% / 67%. O diferencial de portfólio (no_memory vs mem0_only) permanece grande após a correção.
 
 ## Cenários curtos (5 turnos) — recall (30 perguntas, 3 cenários)
 
@@ -11,8 +13,8 @@ Backend: `local` (Qwen2.5-Coder-7B via llama-server). Recall julgado por contain
 ## Cenários estendidos (16 turnos) — recall (30 perguntas, 3 cenários)
 
 - no_memory (LLM puro): 0 of 30 recall (0%)
-- mem0_only: 24 of 30 recall (80%)
-- mem0 + reflection: 20 of 30 recall (67%)
+- mem0_only: 21 of 30 recall (70%)
+- mem0 + reflection: 17 of 30 recall (57%)
 
 Custo total: $0.0000 (backend local)
 

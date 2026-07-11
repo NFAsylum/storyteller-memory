@@ -7,7 +7,7 @@ the caller wires real ones for measurement or fakes for a fast, deterministic te
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol
 
 from core.llm_client import LlmClient
@@ -25,6 +25,18 @@ _QA_SYSTEM = """You answer questions about an ongoing story using ONLY the conte
 
 Answer in one short sentence based on the context. If the context does not contain the
 answer, reply exactly: não sei."""
+
+# Prompt variant (S4.3): terser, fact-only answers.
+_QA_SYSTEM_STRICT = """Answer the question using ONLY the context below. Give the shortest,
+most specific answer possible — ideally just the exact name, number, or fact, no sentence.
+
+<context>
+{context}
+</context>
+
+If the context does not contain the answer, reply exactly: não sei."""
+
+QA_PROMPTS = {"base": _QA_SYSTEM, "strict": _QA_SYSTEM_STRICT}
 
 RecallJudge = Callable[[Question, str], bool]
 
@@ -66,6 +78,7 @@ class HarnessConfig:
     use_retrieval: bool = True
     use_reflection: bool = False
     reflect_every: int = 5
+    top_memories: int = 5
 
 
 @dataclass(frozen=True)
@@ -77,6 +90,9 @@ class ScenarioResult:
     recall_rate: float
     total_cost_usd: float
     avg_cost_usd: float  # total cost / number of questions
+    n_turns: int = 0
+    # (question, answer_text) pairs, so callers can run extra judges without re-answering.
+    answers: list[tuple[Question, str]] = field(default_factory=list)
 
 
 def _normalize(text: str) -> str:
@@ -109,11 +125,16 @@ def run_scenario(
     world_state: WorldState,
     *,
     recall_judge: RecallJudge = simple_recall_judge,
+    qa_system: str = _QA_SYSTEM,
 ) -> ScenarioResult:
     session_id = memory.session_id
     memory.clear()
 
-    retrieval = RetrievalPolicy(memory, world_state) if config.use_retrieval else None
+    retrieval = (
+        RetrievalPolicy(memory, world_state, top_memories=config.top_memories)
+        if config.use_retrieval
+        else None
+    )
     reflection = LlmReflection(llm, world_state, memory) if config.use_reflection else None
     loop = StoryLoop(
         session_id,
@@ -131,11 +152,13 @@ def run_scenario(
 
     total_cost = 0.0
     correct = 0
+    answers: list[tuple[Question, str]] = []
 
     def ask(question: Question, current_turn: int) -> None:
         nonlocal total_cost, correct
-        answer, cost = _answer_question(question, retrieval, llm, session_id, current_turn)
+        answer, cost = _answer_question(question, retrieval, llm, session_id, current_turn, qa_system)
         total_cost += cost
+        answers.append((question, answer))
         if recall_judge(question, answer):
             correct += 1
 
@@ -161,6 +184,8 @@ def run_scenario(
         recall_rate=correct / total if total else 0.0,
         total_cost_usd=total_cost,
         avg_cost_usd=total_cost / total if total else 0.0,
+        n_turns=len(scenario.scenes),
+        answers=answers,
     )
 
 
@@ -170,13 +195,14 @@ def _answer_question(
     llm: LlmClient,
     session_id: str,
     current_turn: int,
+    qa_system: str,
 ) -> tuple[str, float]:
     if retrieval is not None:
         context = _render_context(retrieval.build_context(session_id, current_turn, question.question))
     else:
         context = "(sem contexto)"
     response = llm.generate(
-        system=_QA_SYSTEM.format(context=context),
+        system=qa_system.format(context=context),
         messages=[{"role": "user", "content": question.question}],
     )
     return response.content, response.cost_usd

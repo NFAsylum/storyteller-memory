@@ -6,6 +6,7 @@ the caller wires real ones for measurement or fakes for a fast, deterministic te
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol
@@ -95,15 +96,30 @@ class ScenarioResult:
     answers: list[tuple[Question, str]] = field(default_factory=list)
 
 
+_PUNCT_RE = re.compile(r"[^\w\s]", re.UNICODE)
+_WORD_BOUNDARY_MAX = 8  # short needles need word boundaries to avoid substring false positives
+
+
 def _normalize(text: str) -> str:
-    return " ".join(text.lower().split())
+    # lowercase, strip punctuation, collapse whitespace (accents preserved via \w/UNICODE)
+    return " ".join(_PUNCT_RE.sub(" ", text.lower()).split())
+
+
+def _contains(needle: str, haystack: str) -> bool:
+    """Short needles match on word boundaries (so 'Vex' != 'Vexado'); long ones as substring."""
+    n = _normalize(needle)
+    if not n:
+        return False
+    if len(n) < _WORD_BOUNDARY_MAX:
+        return re.search(rf"\b{re.escape(n)}\b", haystack) is not None
+    return n in haystack
 
 
 def simple_recall_judge(question: Question, response_text: str) -> bool:
     """Deterministic recall check: ground_truth or an accepted variant appears in the reply."""
     haystack = _normalize(response_text)
     needles = [question.ground_truth, *question.acceptable_variants]
-    return any(_normalize(n) in haystack for n in needles)
+    return any(_contains(n, haystack) for n in needles)
 
 
 def _render_context(bundle: ContextBundle) -> str:

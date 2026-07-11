@@ -44,6 +44,9 @@ def test_generate_prepends_system_message() -> None:
     assert kwargs["messages"][0] == {"role": "system", "content": "SYS"}
     assert kwargs["messages"][1] == {"role": "user", "content": "hi"}
     assert kwargs["model"] == "qwen"
+    # F1.5: deterministic decoding
+    assert kwargs["temperature"] == 0.0
+    assert kwargs["seed"] == 42
 
 
 def test_factory_returns_local_when_backend_local(monkeypatch: pytest.MonkeyPatch) -> None:

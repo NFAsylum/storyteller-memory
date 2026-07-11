@@ -85,6 +85,7 @@ class AnthropicLlmClient:
             "model": self.model,
             "max_tokens": self.max_tokens,
             "messages": messages,
+            "temperature": 0,  # deterministic decoding (F1.5); accepted on claude-sonnet-4-6
         }
         if system is not None:
             kwargs["system"] = system

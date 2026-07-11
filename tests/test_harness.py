@@ -132,3 +132,28 @@ def test_simple_recall_judge_matches_variants() -> None:
     )
     assert simple_recall_judge(q, "Foi a cavaleira ARIA quem descobriu.") is True
     assert simple_recall_judge(q, "Foi o conselheiro.") is False
+
+
+def _q(ground_truth: str, variants: list[str] | None = None) -> Question:
+    return Question(
+        id="q", asked_after_turn=1, category="recall_factual", question="?",
+        ground_truth=ground_truth, acceptable_variants=variants or [],
+    )
+
+
+def test_word_boundary_vex_not_in_vexado() -> None:
+    # F1.1 regression: short ground_truth must not substring-match a longer word.
+    assert simple_recall_judge(_q("Vex"), "Ele ficou muito vexado com a cena.") is False
+    assert simple_recall_judge(_q("Vex"), "O conselheiro Vex fugiu.") is True
+
+
+def test_word_boundary_aria_not_in_ariana() -> None:
+    assert simple_recall_judge(_q("Aria"), "A princesa Ariana chegou.") is False
+    assert simple_recall_judge(_q("Aria"), "A cavaleira Aria chegou.") is True
+
+
+def test_long_variant_still_matches_and_punctuation_stripped() -> None:
+    q = _q("Aria", ["a cavaleira Aria"])
+    assert simple_recall_judge(q, "a cavaleira Aria descobriu") is True
+    # punctuation around the needle no longer blocks the match
+    assert simple_recall_judge(_q("Doran"), "Foi o rei, Doran!") is True

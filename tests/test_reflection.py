@@ -212,3 +212,16 @@ def test_llm_reflection_gives_up_after_retries(world: WorldState) -> None:
     assert result.characters_updated == 0
     assert result.relations_updated == 0
     assert result.cost_usd == pytest.approx(0.03)
+    assert result.failed is True  # F1.6: reports the failure instead of swallowing it
+
+
+def test_reflection_is_idempotent_on_rerun(world: WorldState) -> None:
+    # F1.3: re-running consolidate over the same turns must not duplicate beats.
+    records = [_turn(1, "Aria."), _turn(2, "Aria."), _turn(3, "Aria.")]
+    first = _reflect(world, records, since_turn=0)
+    assert first.beats_created == 1
+
+    second = _reflect(world, records, since_turn=0)
+    assert second.beats_created == 0
+    assert second.characters_updated == 0
+    assert len(world.list(StoryBeat, SESSION)) == 1  # still just one beat

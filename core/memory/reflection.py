@@ -14,6 +14,7 @@ It is deliberately dumb — Sprint 3 measures how much a real LLM improves on th
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections import Counter
 from pathlib import Path
@@ -25,8 +26,16 @@ from core.llm_client import LlmClient
 from core.memory.mem0_adapter import Mem0Adapter, MemoryRecord
 from core.memory.world_state import Character, Location, Relation, StoryBeat, WorldState
 
+logger = logging.getLogger(__name__)
+
 _REFLECTION_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "reflection.txt"
 _DEFAULT_MAX_RETRIES = 2
+
+
+def _already_consolidated(world: WorldState, session_id: str, last_turn: int) -> bool:
+    """True if a story beat already covers up to last_turn (dedupe re-runs — F1.3)."""
+    beats = world.list(StoryBeat, session_id)
+    return bool(beats) and max(b.turn for b in beats) >= last_turn
 
 # A capitalized token (accented letters included), 3+ chars to skip "O"/"A"/"Um".
 _WORD_RE = re.compile(r"\b[A-ZÀ-Ý][a-zà-ÿ]{2,}\b")
@@ -64,6 +73,7 @@ class ReflectionResult(BaseModel):
     characters_updated: int = Field(ge=0)
     relations_updated: int = Field(ge=0)
     cost_usd: float = Field(ge=0.0)
+    failed: bool = False  # True when the LLM never produced valid JSON (F1.6)
 
 
 @runtime_checkable
@@ -90,6 +100,9 @@ class FakeReflection:
 
         first_turn = int(turns[0].metadata.get("turn", since_turn + 1))
         last_turn = int(turns[-1].metadata.get("turn", since_turn + 1))
+
+        if _already_consolidated(self._world, session_id, last_turn):
+            return ReflectionResult(beats_created=0, characters_updated=0, relations_updated=0, cost_usd=0.0)
 
         counts = self._character_counts(turns)
         candidates = sorted(name for name, count in counts.items() if count > _CANDIDATE_MIN_COUNT)
@@ -287,12 +300,15 @@ class LlmReflection:
             )
 
         last_turn = int(turns[-1].metadata.get("turn", since_turn + 1))
+        if _already_consolidated(self._world, session_id, last_turn):
+            return ReflectionResult(beats_created=0, characters_updated=0, relations_updated=0, cost_usd=0.0)
+
         prompt = self._build_prompt(session_id, turns)
         extraction, cost = self._extract_with_retry(prompt)
         if extraction is None:
-            # Couldn't get valid JSON after retries — persist nothing, still report cost.
+            # Couldn't get valid JSON after retries — persist nothing, still report cost + failure.
             return ReflectionResult(
-                beats_created=0, characters_updated=0, relations_updated=0, cost_usd=cost
+                beats_created=0, characters_updated=0, relations_updated=0, cost_usd=cost, failed=True
             )
 
         characters_updated = self._persist_characters(session_id, extraction, last_turn)
@@ -313,9 +329,12 @@ class LlmReflection:
             {"role": "user", "content": "Extract the structured facts as JSON now."}
         ]
         cost = 0.0
-        for _ in range(self._max_retries + 1):
+        last_content = ""
+        attempts = self._max_retries + 1
+        for _ in range(attempts):
             response = self._llm.generate(system=prompt, messages=messages)
             cost += response.cost_usd
+            last_content = response.content
             try:
                 return ReflectionExtraction.model_validate(_parse_json_object(response.content)), cost
             except (ValueError, json.JSONDecodeError, ValidationError) as exc:
@@ -327,6 +346,11 @@ class LlmReflection:
                         "Return ONLY the JSON object, no prose, no code fences.",
                     }
                 )
+        logger.error(
+            "LlmReflection: all %d attempts failed to produce valid JSON. Last response: %s",
+            attempts,
+            last_content[:500],
+        )
         return None, cost
 
     def _build_prompt(self, session_id: str, turns: list[MemoryRecord]) -> str:

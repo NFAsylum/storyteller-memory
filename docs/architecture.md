@@ -65,7 +65,9 @@ class LlmResponse(BaseModel):
 - **`FakeLlmClient` (`core/llm_fakes.py`)**: retorna resposta templada determinística, hash do prompt como seed. `cost_usd=0`. Sem API key. Sprints 1-2 rodam 100% com Fake.
 - **`AnthropicLlmClient` (`core/llm_anthropic.py`)**: wrapper Anthropic SDK. Retry exponencial (max 3), timeout 60s, cost logging, backoff em 429. Precisa de `ANTHROPIC_API_KEY`. Ativado em Sprint 3+.
 
-Factory: `create_llm_client()` em `core/llm_client.py` lê env `LLM_BACKEND` (default `fake`) e retorna a impl correta.
+Factory: `create_llm_client()` em `core/llm_client.py` lê env `LLM_BACKEND` (default `fake`) e retorna a impl correta. `LocalLlmClient` (`core/llm_local.py`) fala com um llama-server OpenAI-compatible (`LOCAL_LLM_URL`), `cost_usd=0`.
+
+**Reprodutibilidade (F1.5):** os backends reais rodam com **`temperature=0`** e, no local, **`seed=42`** (via `LOCAL_LLM_SEED`), pra que rodadas do harness sejam determinísticas run-a-run. `FakeLlmClient` já é determinístico por construção.
 
 Mesma lógica pra `Reflection`: `Reflection` Protocol + `FakeReflection` (regra determinística) + `AnthropicReflection` (Sprint 3, LLM sumariza).
 

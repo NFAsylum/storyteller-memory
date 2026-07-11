@@ -17,6 +17,8 @@ from core.llm_client import LlmResponse
 DEFAULT_TIMEOUT_S = 120.0  # local model is slower than a hosted API
 DEFAULT_MAX_TOKENS = 1024
 DEFAULT_MODEL = "local-model"
+DEFAULT_TEMPERATURE = 0.0  # deterministic decoding (F1.5)
+DEFAULT_SEED = 42  # fixed seed so harness runs are reproducible; override via LOCAL_LLM_SEED
 # llama-server ignores the key but the OpenAI SDK requires a non-empty field.
 LOCAL_API_KEY = "local"
 
@@ -31,6 +33,8 @@ class LocalLlmClient:
         *,
         timeout_s: float = DEFAULT_TIMEOUT_S,
         max_tokens: int = DEFAULT_MAX_TOKENS,
+        temperature: float = DEFAULT_TEMPERATURE,
+        seed: int | None = None,
         client: Any | None = None,
     ) -> None:
         url = url or os.environ.get("LOCAL_LLM_URL")
@@ -39,6 +43,8 @@ class LocalLlmClient:
         self.url = url
         self.model = model or os.environ.get("LOCAL_LLM_MODEL") or DEFAULT_MODEL
         self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.seed = seed if seed is not None else int(os.environ.get("LOCAL_LLM_SEED", DEFAULT_SEED))
         # Local server has no 429s, so no exponential retry — just a generous timeout.
         self._client = client or OpenAI(base_url=url, api_key=LOCAL_API_KEY, timeout=timeout_s)
 
@@ -59,6 +65,8 @@ class LocalLlmClient:
             model=self.model,
             max_tokens=self.max_tokens,
             messages=chat_messages,
+            temperature=self.temperature,
+            seed=self.seed,
         )
         choice = completion.choices[0]
         usage = completion.usage

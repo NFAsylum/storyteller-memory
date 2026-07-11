@@ -127,3 +127,37 @@ def test_delete_session(client) -> None:
 def test_turn_on_missing_session_404(client) -> None:
     tc, _ = client
     assert tc.post("/sessions/nope/turn", json={"text": "x"}).status_code == 404
+
+
+def test_health(client) -> None:
+    tc, _ = client
+    resp = tc.get("/health")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
+
+
+def test_delete_rolls_back_when_mem0_clear_fails(tmp_path: Path) -> None:
+    # F1.4: if mem0.clear() raises, the DB delete must roll back and the client get 500.
+    engine = create_engine(f"sqlite:///{tmp_path / 'api_fail.db'}")
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(engine, expire_on_commit=False)
+
+    class _FailProvider:
+        def __call__(self, session_id: str) -> _FakeMem0:
+            mem = _FakeMem0(session_id)
+
+            def boom() -> None:
+                raise RuntimeError("mem0 down")
+
+            mem.clear = boom  # type: ignore[method-assign]
+            return mem
+
+    backend = Backend(session_factory=factory, llm=FakeLlmClient(), memory_for=_FailProvider())
+    app.dependency_overrides[get_backend] = lambda: backend
+    try:
+        tc = TestClient(app)
+        sid = tc.post("/sessions", json={"name": "x"}).json()["id"]
+        assert tc.delete(f"/sessions/{sid}").status_code == 500
+        assert tc.get(f"/sessions/{sid}").status_code == 200  # NOT deleted
+    finally:
+        app.dependency_overrides.clear()

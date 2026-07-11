@@ -11,7 +11,8 @@ from __future__ import annotations
 from typing import TypeVar
 
 from sqlalchemy import JSON, ForeignKey, Integer, String, Text, select
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import Session as DbSession
 
 
 class Base(DeclarativeBase):
@@ -94,7 +95,7 @@ _Entity = TypeVar("_Entity", Character, Location, Relation, StoryBeat)
 class WorldState:
     """Session-bound CRUD over the four world-state entities."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: DbSession) -> None:
         self._session = session
 
     def add(self, entity: _Entity) -> _Entity:

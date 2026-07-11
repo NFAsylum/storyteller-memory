@@ -14,11 +14,13 @@ Endpoints (Sprint 5):
 
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 
@@ -37,6 +39,21 @@ from core.memory.world_state import (
 from core.story_loop import StoryLoop, load_prompt_template, render_prompt
 
 app = FastAPI(title="Storyteller API")
+
+# Dev default localhost:3000; override in prod via CORS_ORIGINS (comma-separated).
+_cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in _cors_origins if o.strip()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
 
 
 def _now() -> str:
@@ -130,8 +147,14 @@ def delete_session(session_id: str, backend: Backend = Depends(get_backend)) -> 
         for model in (Turn, StoryBeat, Relation, Location, Character):
             db.execute(delete(model).where(model.session_id == session_id))
         db.execute(delete(Session).where(Session.id == session_id))
+        # Clear the vector store BEFORE committing the DB delete (F1.4): if mem0 fails,
+        # roll back so we never leave a "deleted" session with orphaned vectors.
+        try:
+            backend.memory_for(session_id).clear()
+        except Exception as exc:  # noqa: BLE001 - surface any mem0 failure as a clean 500
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"failed to clear memory: {exc}") from exc
         db.commit()
-    backend.memory_for(session_id).clear()
     return Response(status_code=204)
 
 

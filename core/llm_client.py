@@ -45,4 +45,8 @@ def create_llm_client(backend: str | None = None, **kwargs: Any) -> LlmClient:
         from core.llm_anthropic import AnthropicLlmClient
 
         return AnthropicLlmClient(**kwargs)
-    raise ValueError(f"Unknown LLM_BACKEND {backend!r} (expected 'fake' or 'anthropic')")
+    if backend == "local":
+        from core.llm_local import LocalLlmClient
+
+        return LocalLlmClient(**kwargs)
+    raise ValueError(f"Unknown LLM_BACKEND {backend!r} (expected 'fake', 'anthropic', or 'local')")

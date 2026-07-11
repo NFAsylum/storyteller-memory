@@ -136,7 +136,7 @@ Wrapper já existe (S1.2). Aqui garantimos que roda contra API real com key vál
 
 > **Adaptado pro backend local (inbox 2026-07-11):** Sprint 3 roda com `LLM_BACKEND=local`. Validado com `scripts/smoke_llm.py` (genérico, agnóstico de backend) → resposta real do Qwen ("Blue.", ~5s, cost $0). Config switch fake/anthropic/local + inválido coberto no factory. O 429-backoff e o timeout→`LlmTimeoutError` do `AnthropicLlmClient` seguem cobertos pelos unit tests do S1.2 (wrapper inalterado). Rodar contra Anthropic real (custo ~$0.001) fica opcional pra quando houver key paga.
 
-### [ ] S3.2 — `AnthropicReflection` (4 h)
+### [x] S3.2 — `AnthropicReflection` (4 h)
 Impl real de `Reflection` Protocol. Prompt em `core/prompts/reflection.txt` gera JSON estruturado.
 **DoD:**
 - `AnthropicReflection.consolidate(...)` chama LLM real com prompt de reflection
@@ -144,6 +144,8 @@ Impl real de `Reflection` Protocol. Prompt em `core/prompts/reflection.txt` gera
 - Retry se JSON malformado (max 2 retries com feedback)
 - Teste manual: rodar em session de 10 turnos, verificar que story_beats populou com summaries reais
 - Custo por reflection registrado (~$0.01-0.05)
+
+> **Impl como `LlmReflection` (genérica, recebe `LlmClient`) em vez de `AnthropicReflection`** — roda com o backend configurado (local, per inbox). Verificado real: `LLM_BACKEND=local scripts/manual_reflection_test.py` → 10 turnos + reflection do Qwen → JSON válido, `story_beats` com 3 summaries reais, chars=3/locs=2/rels=3, cost $0 (local), 99s. Retry de JSON malformado (max 2 com feedback) implementado + unit-tested (12 testes de reflection). Custo Anthropic (~$0.01-0.05) é $0 no backend local.
 
 ### [ ] S3.3 — `eval/harness.py` v1 (6 h)
 Carrega scenario, roda N turnos, faz M perguntas, retorna métricas.

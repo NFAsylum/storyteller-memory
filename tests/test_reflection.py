@@ -1,14 +1,22 @@
 """Tests for FakeReflection — mechanical character extraction into world_state (keyless)."""
 
+import json
 from collections.abc import Iterator
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from core.llm_client import LlmResponse
 from core.memory.mem0_adapter import MemoryRecord
-from core.memory.reflection import FakeReflection, Reflection, ReflectionResult
+from core.memory.reflection import (
+    FakeReflection,
+    LlmReflection,
+    Reflection,
+    ReflectionResult,
+)
 from core.memory.world_state import Base, Character, Location, Relation, StoryBeat, WorldState
 
 SESSION = "sess-1"
@@ -135,3 +143,72 @@ def test_counts_are_non_negative(world: WorldState) -> None:
     assert result.relations_updated >= 0
     assert result.cost_usd >= 0.0
     assert world.list(StoryBeat, SESSION)  # a beat was recorded
+
+
+# --- LlmReflection (LLM mocked) --------------------------------------------------
+
+_VALID_EXTRACTION = {
+    "new_characters": [
+        {"name": "Aria", "traits": ["leal"], "first_appeared_turn": 1},
+        {"name": "Vex", "traits": ["ambicioso"], "first_appeared_turn": 2},
+    ],
+    "character_updates": [],
+    "new_locations": [{"name": "Aldrath", "description": "castelo", "first_visited_turn": 1}],
+    "relations": [{"a": "Aria", "b": "Vex", "kind": "rivalidade", "valence": -2, "since_turn": 2}],
+    "beats": [{"summary": "Aria descobre a traição de Vex", "importance": 8, "turn": 3, "tags": ["traição"]}],
+}
+
+
+def _llm_response(content: str, cost: float = 0.02) -> LlmResponse:
+    return LlmResponse(content=content, stop_reason="stop", usage={"input_tokens": 100, "output_tokens": 50}, cost_usd=cost)
+
+
+def _mock_llm(*contents: str, cost: float = 0.02) -> MagicMock:
+    llm = MagicMock()
+    llm.generate.side_effect = [_llm_response(c, cost) for c in contents]
+    return llm
+
+
+def _records() -> list[MemoryRecord]:
+    return [
+        _turn(1, "Aria chega ao castelo de Aldrath."),
+        _turn(2, "Vex recebe uma carta secreta."),
+        _turn(3, "Aria descobre a traição de Vex."),
+    ]
+
+
+def test_llm_reflection_persists_structured_facts(world: WorldState) -> None:
+    llm = _mock_llm(json.dumps(_VALID_EXTRACTION))
+    result = LlmReflection(llm, world, _FakeMemory(_records())).consolidate(SESSION, since_turn=0)
+
+    assert {c.name for c in world.list(Character, SESSION)} == {"Aria", "Vex"}
+    assert {loc.name for loc in world.list(Location, SESSION)} == {"Aldrath"}
+    rels = world.list(Relation, SESSION)
+    assert len(rels) == 1 and rels[0].kind == "rivalidade"
+    assert world.list(StoryBeat, SESSION)[0].summary == "Aria descobre a traição de Vex"
+    assert result.beats_created == 1
+    assert result.relations_updated == 1
+    assert result.cost_usd == pytest.approx(0.02)
+
+
+def test_llm_reflection_retries_on_malformed_json(world: WorldState) -> None:
+    # First reply is prose (no JSON), second is a valid object wrapped in fences.
+    llm = _mock_llm("desculpe, aqui vai:", "```json\n" + json.dumps(_VALID_EXTRACTION) + "\n```")
+    result = LlmReflection(llm, world, _FakeMemory(_records())).consolidate(SESSION, since_turn=0)
+
+    assert llm.generate.call_count == 2
+    assert {c.name for c in world.list(Character, SESSION)} == {"Aria", "Vex"}
+    assert result.cost_usd == pytest.approx(0.04)  # two calls billed
+
+
+def test_llm_reflection_gives_up_after_retries(world: WorldState) -> None:
+    llm = _mock_llm("no json here", "still no json", "nope", cost=0.01)
+    reflection = LlmReflection(llm, world, _FakeMemory(_records()), max_retries=2)
+    result = reflection.consolidate(SESSION, since_turn=0)
+
+    assert llm.generate.call_count == 3  # initial + 2 retries
+    assert world.list(Character, SESSION) == []  # nothing persisted
+    assert result.beats_created == 0
+    assert result.characters_updated == 0
+    assert result.relations_updated == 0
+    assert result.cost_usd == pytest.approx(0.03)

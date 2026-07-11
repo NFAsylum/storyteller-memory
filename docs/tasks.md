@@ -155,7 +155,7 @@ Carrega scenario, roda N turnos, faz M perguntas, retorna métricas.
 - Config permite escolher backend (fake pra sanity check, anthropic pra medição real)
 - `pytest tests/test_harness.py` cobre 1 mini-scenario com FakeLlm (rápido, determinístico)
 
-### [ ] S3.4 — `eval/judges.py` v1 (4 h)
+### [x] S3.4 — `eval/judges.py` v1 (4 h)
 LLM-as-judge pra recall check + hallucination detection.
 **DoD:**
 - `judge_recall(question, response) -> Literal["YES", "NO", "PARTIAL"]`

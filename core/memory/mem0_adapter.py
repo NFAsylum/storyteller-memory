@@ -58,6 +58,26 @@ def build_mem0_config(
     }
 
 
+def build_mem0_memory(
+    api_key: str | None = None,
+    storage_path: str | None = None,
+    llm_model: str = DEFAULT_LLM_MODEL,
+    embed_model: str = DEFAULT_EMBED_MODEL,
+) -> Any:
+    """Construct a real mem0 Memory. Heavy (~72s import) — build once and share it."""
+    # Lazy import: mem0's heavy backend deps (sentence-transformers, faiss) are only
+    # needed for a real instance, not for unit tests that inject a fake memory.
+    from mem0 import Memory as Mem0Memory
+
+    # mem0 constructs the Anthropic LLM eagerly at from_config, and the SDK raises without
+    # a key. add(infer=False)/search never invoke that LLM (only the local embedder), so a
+    # placeholder key keeps the pipeline runnable without ANTHROPIC_API_KEY.
+    resolved_key = api_key or os.environ.get("ANTHROPIC_API_KEY") or PLACEHOLDER_API_KEY
+    resolved_path = storage_path or os.environ.get("MEM0_STORAGE_PATH", DEFAULT_STORAGE_PATH)
+    config = build_mem0_config(resolved_key, resolved_path, llm_model, embed_model)
+    return Mem0Memory.from_config(config)
+
+
 class Mem0Adapter:
     """Thin, session-scoped wrapper over a mem0 Memory instance."""
 
@@ -81,19 +101,7 @@ class Mem0Adapter:
         llm_model: str,
         embed_model: str,
     ) -> Any:
-        # Lazy import: mem0's heavy backend deps (sentence-transformers, faiss) are only
-        # needed for a real instance, not for unit tests that inject a fake memory.
-        from mem0 import Memory as Mem0Memory
-
-        # mem0 constructs the Anthropic LLM eagerly at from_config, and the SDK raises
-        # without a key. In Sprints 1-2 we only call add(infer=False)/search, which never
-        # invoke that LLM (only the local embedder), so a placeholder key is safe and
-        # keeps the whole pipeline runnable without ANTHROPIC_API_KEY. A real key is only
-        # required once reflection uses the LLM (Sprint 3).
-        resolved_key = api_key or os.environ.get("ANTHROPIC_API_KEY") or PLACEHOLDER_API_KEY
-        resolved_path = storage_path or os.environ.get("MEM0_STORAGE_PATH", DEFAULT_STORAGE_PATH)
-        config = build_mem0_config(resolved_key, resolved_path, llm_model, embed_model)
-        return Mem0Memory.from_config(config)
+        return build_mem0_memory(api_key, storage_path, llm_model, embed_model)
 
     def add(self, text: str, metadata: dict[str, Any] | None = None) -> str:
         # infer=False stores the turn verbatim (one entry per call) instead of running

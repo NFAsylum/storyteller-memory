@@ -62,6 +62,32 @@ class StoryBeat(Base):
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
+class Session(Base):
+    """A story session (the UI's left-column list). id doubles as the mem0/world_state scope."""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128))
+    brief: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[str] = mapped_column(String(32))  # ISO-8601 string (portable)
+    last_turn: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Turn(Base):
+    """One chat turn: user input + narrator output + the context bundle used that turn."""
+
+    __tablename__ = "turns"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(64), index=True)
+    turn_number: Mapped[int] = mapped_column(Integer)
+    user_input: Mapped[str] = mapped_column(Text)
+    narrator_text: Mapped[str] = mapped_column(Text)
+    retrieved_context: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[str] = mapped_column(String(32))
+
+
 _Entity = TypeVar("_Entity", Character, Location, Relation, StoryBeat)
 
 

@@ -38,6 +38,23 @@ def _slot(items: list[str], sep: str) -> str:
     return sep.join(i for i in items if i) or _EMPTY_SLOT
 
 
+def render_prompt(template: str, bundle: ContextBundle | None, user_input: str) -> str:
+    """Fill the story-continuation template from a context bundle (or empty slots)."""
+    if bundle is None:
+        active_characters = story_beats = raw_memories = _EMPTY_SLOT
+    else:
+        active_characters = _slot(bundle.active_characters, ", ")
+        story_beats = _slot(bundle.structured_facts, "; ")
+        raw_memories = _slot(bundle.raw_memories, "\n")
+    return template.format(
+        active_characters=active_characters,
+        recent_locations=_EMPTY_SLOT,  # location NER not wired yet
+        story_beats=story_beats,
+        raw_memories=raw_memories,
+        user_input=user_input,
+    )
+
+
 class StoryLoop:
     """Coordinates a narrative turn: retrieve context, narrate, store, periodically reflect."""
 
@@ -51,6 +68,7 @@ class StoryLoop:
         reflection: Reflection | None = None,
         reflect_every: int = DEFAULT_REFLECT_EVERY,
         prompt_template: str | None = None,
+        start_turn: int = 0,
     ) -> None:
         self.session_id = session_id
         self.memory = memory
@@ -59,7 +77,7 @@ class StoryLoop:
         self.reflection = reflection
         self.reflect_every = reflect_every
         self._prompt_template = prompt_template or load_prompt_template()
-        self._turn = 0
+        self._turn = start_turn  # resume numbering for a persisted session
 
     def run_turn(self, user_input: str) -> TurnResult:
         self._turn += 1
@@ -93,19 +111,7 @@ class StoryLoop:
         )
 
     def _render_prompt(self, user_input: str, bundle: ContextBundle | None) -> str:
-        if bundle is None:
-            active_characters = story_beats = raw_memories = _EMPTY_SLOT
-        else:
-            active_characters = _slot(bundle.active_characters, ", ")
-            story_beats = _slot(bundle.structured_facts, "; ")
-            raw_memories = _slot(bundle.raw_memories, "\n")
-        return self._prompt_template.format(
-            active_characters=active_characters,
-            recent_locations=_EMPTY_SLOT,  # location NER not wired yet
-            story_beats=story_beats,
-            raw_memories=raw_memories,
-            user_input=user_input,
-        )
+        return render_prompt(self._prompt_template, bundle, user_input)
 
     def _maybe_reflect(self) -> None:
         if self.reflection and self._turn % self.reflect_every == 0:

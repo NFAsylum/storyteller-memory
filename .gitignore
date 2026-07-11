@@ -31,3 +31,6 @@ dev-marco/
 docker/
 portfolio-brief-para-outra-claude.md
 CLAUDE.csharp-legacy.md
+
+# eval intermediate data
+/results.json

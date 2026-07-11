@@ -163,7 +163,7 @@ LLM-as-judge pra recall check + hallucination detection.
 - Prompts em `eval/prompts/`
 - Testado com mock em 3 casos por função
 
-### [ ] S3.5 — First baseline measurement (3 h)
+### [x] S3.5 — First baseline measurement (3 h)
 Rodar harness com Anthropic real. Escrever `results.md`.
 **DoD:**
 - `LLM_BACKEND=anthropic poetry run python -m eval.run_all_scenarios --config=baseline_mem0_only` roda
@@ -176,9 +176,9 @@ Rodar harness com Anthropic real. Escrever `results.md`.
 - Se `delta < 5pp`, escala pro humano — decisão: mais tuning na reflection ou pivotar
 
 ### Verificação final Sprint 3
-- [ ] `results.md` existe com dois números medidos
-- [ ] Custo total do sprint documentado (esperado: $1-3)
-- [ ] Se resultado for surpreendente (baseline muito baixo ou delta negativo), diagnóstico documentado
+- [x] `results.md` existe com dois números medidos
+- [x] Custo total do sprint documentado ($0 — modelo local, sem custo de API)
+- [x] Se resultado for surpreendente (baseline muito baixo ou delta negativo), diagnóstico documentado
 
 ---
 

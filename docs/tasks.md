@@ -207,7 +207,7 @@ Expandir `judges.py` com consistency + hallucination detection subjetiva.
 - 5 exemplos manuais em `eval/judges_calibration.json` com score humano
 - Rodar `poetry run python -m eval.calibrate_judges`: concordância humano/LLM >80%
 
-### [ ] S4.3 — Iterar prompt + retrieval (6 h)
+### [x] S4.3 — Iterar prompt + retrieval (6 h)
 Testar 4 variantes, medir cada uma.
 **DoD:**
 - Tabela em `docs/experiments.md` com 4 variantes (2 prompt + 2 retrieval)

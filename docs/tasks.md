@@ -147,7 +147,7 @@ Impl real de `Reflection` Protocol. Prompt em `core/prompts/reflection.txt` gera
 
 > **Impl como `LlmReflection` (genérica, recebe `LlmClient`) em vez de `AnthropicReflection`** — roda com o backend configurado (local, per inbox). Verificado real: `LLM_BACKEND=local scripts/manual_reflection_test.py` → 10 turnos + reflection do Qwen → JSON válido, `story_beats` com 3 summaries reais, chars=3/locs=2/rels=3, cost $0 (local), 99s. Retry de JSON malformado (max 2 com feedback) implementado + unit-tested (12 testes de reflection). Custo Anthropic (~$0.01-0.05) é $0 no backend local.
 
-### [ ] S3.3 — `eval/harness.py` v1 (6 h)
+### [x] S3.3 — `eval/harness.py` v1 (6 h)
 Carrega scenario, roda N turnos, faz M perguntas, retorna métricas.
 **DoD:**
 - `harness.run_scenario(scenario, config)` retorna `ScenarioResult` com `recall_rate`, `avg_cost_usd`

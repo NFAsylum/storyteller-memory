@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { MemoryInspector } from "./memory-inspector";
@@ -25,5 +26,13 @@ describe("MemoryInspector", () => {
 
     expect(screen.getByTestId("character-card")).toHaveTextContent("Aria");
     expect(screen.getByText("leal")).toBeInTheDocument();
+  });
+
+  it("troca para a aba Locais e revela o local (painel inativo desmontado)", async () => {
+    render(<MemoryInspector sessionId="a" />);
+    // Base UI desmonta o painel inativo — o local não está no DOM antes do clique.
+    expect(screen.queryByText("Aldrath")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /Locais/ }));
+    expect(await screen.findByText("Aldrath")).toBeInTheDocument();
   });
 });

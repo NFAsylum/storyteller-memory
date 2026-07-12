@@ -229,41 +229,42 @@ Testar 4 variantes, medir cada uma.
 
 ## Sprint 5 — Frontend + memory inspector (20 h)
 
-### [ ] S5.1 — Streamlit chat base (6 h)
-Chat mensagens + input + session_id persistente em cookie.
-**DoD:**
-- `streamlit run ui/app.py` abre chat funcional
-- Recarregar página mantém a session (cookie 30 dias)
-- Cada mensagem chama `POST /sessions/{id}/turn`
-- Erros de API mostram toast, não crash
+> **PIVOT (inbox 2026-07-11):** Streamlit → **Next.js 16 + shadcn (Base UI) + Tailwind 4 + Vitest**, construído do zero em `ui/`. O DoD abaixo foi reescrito pra bater com o da FASE 2 do inbox. Backend na branch `dev-marco-phase1-audit-fixes` (9 endpoints FastAPI + CORS + /health), frontend na branch `dev-marco-s5-ui` (empilhada). As sub-tasks Streamlit originais (S5.1-S5.4) ficam obsoletas.
 
-### [ ] S5.2 — Sidebar Memory Inspector (8 h)
-3 abas: `Memories`, `World State`, `Reflections`.
+### [x] S5.1 — Chat base (Next.js) — DONE
+`ChatArea` + `SessionsSidebar` + persistência de session em cookie (30 d).
 **DoD:**
-- Aba `Memories`: raw mem0 com timestamp, similaridade com último turn
-- Aba `World State`: tabelas de chars/locs/rels/beats, filtro por session
-- Aba `Reflections`: story_beats agrupados por batch
-- Cada aba tem botão refresh que re-fetcha via API
+- [x] `npm run build` OK; `npm run dev` sobe em :3000 (dev roda; verificação visual é do Marco)
+- [x] Cookie de 30 dias: home resume a última sessão (`session-cookie.ts`)
+- [x] Cada turno chama `POST /sessions/{id}/turn` (via `api.runTurn`)
+- [x] Erro de API mostra toast (sonner), não crash — coberto por teste
 
-### [ ] S5.3 — Botões debug (4 h)
-Sidebar tem 3 botões:
-- `Force reflection now` → `POST /sessions/{id}/reflect`
-- `Show retrieved this turn` → expander com último `ContextBundle`
-- `Clear session` → `DELETE /sessions/{id}` + reload
-
+### [x] S5.2 — Memory Inspector (Next.js) — DONE
+4 abas com contagem: **Personagens / Locais / Relações / Story beats**.
 **DoD:**
-- Cada botão executa e mostra feedback visual
-- Confirmação modal em `Clear session`
+- [x] Cards de personagem (nome + traits + first_appeared_turn), locais, relações (id→nome), beats (timeline)
+- [x] Contagem no header de cada aba (ex.: "Personagens (5)")
+- [x] Popula em tempo real via SWR (revalidação após cada `POST /turn`)
 
-### [ ] S5.4 — Persistência de session (2 h)
-Autosave + resume.
-**DoD:**
-- Teste manual: encerra Streamlit, reabre 24h depois (fake via env), context preservado
-- Session record em SQLite/Postgres tem `last_active_at` atualizado
+### [x] S5.3 — Botões debug (Next.js) — DONE
+`DebugPanel` abaixo do inspector:
+- [x] `Forçar reflection` → `POST /sessions/{id}/reflect` (toast com contagens / falha)
+- [x] `Contexto do último turno` → `GET /turns/{n}/context` (raw memories + facts + active chars)
+- [x] `Comparar com/sem memória` → `POST /compare-turn`, split-screen (killer demo)
+- [x] `Limpar sessão` → `DELETE /sessions/{id}` com modal de confirmação
+
+### [x] S5.4 — Persistência de session — DONE
+- [x] Session id em cookie 30 d; home reabre direto na sessão se ainda existe no backend
+- [x] Backend registra `Session` + `Turn` (SQLite, migration 0002)
 
 ### Verificação final Sprint 5
-- [ ] Testar UI em navegador por 30 min sem crash
-- [ ] Screenshot do memory inspector no `README.md`
+- [x] `pytest` backend verde (101)
+- [x] `npm run test` (Vitest) verde — 9 testes, 3 eixos (render/interação/erro-loading) por componente
+- [x] Backend e2e via curl: health/CORS/create/turn/state/compare
+- [ ] **BLOQUEADO (sem browser/DISPLAY na instância):** testar UI em navegador 30 min sem crash
+- [ ] **BLOQUEADO:** 3-4 screenshots em `docs/screenshots/` + GIF em `docs/demo.gif` — Marco gera (ver `docs/screenshots/README.md`)
+
+> Sprint 5 **não** marcada 100% feita: os 2 itens visuais dependem de browser (blocker escalado ao Marco). Todo o resto é verificável e verde.
 
 ---
 

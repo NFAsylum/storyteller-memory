@@ -70,9 +70,12 @@ a three-column workspace (sessions · chat · memory inspector) with a **compare
 with/without memory** split-screen — the same turn re-run twice, generic answer on
 the left, contextualized answer on the right.
 
-<!-- screenshots pending — generated on a machine with a browser; see docs/screenshots/README.md -->
+_Screenshots and a demo GIF are coming — see [`docs/screenshots/README.md`](docs/screenshots/README.md)._
+
+<!-- Uncomment once the files exist (generated on a machine with a browser):
 ![Memory inspector populated](docs/screenshots/03-memory-inspector.png)
 ![With/without memory split-screen](docs/screenshots/04-compare-split-screen.png)
+-->
 
 See [`ui/README.md`](ui/README.md) for the frontend.
 

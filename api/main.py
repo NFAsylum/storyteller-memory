@@ -79,8 +79,8 @@ def _get_session(db, session_id: str) -> Session:
 def _memory_state(world: WorldState, session_id: str) -> dict[str, Any]:
     return {
         "characters": [
-            {"name": c.name, "traits": c.traits, "first_appeared_turn": c.first_appeared_turn,
-             "last_seen_turn": c.last_seen_turn}
+            {"id": c.id, "name": c.name, "traits": c.traits,
+             "first_appeared_turn": c.first_appeared_turn, "last_seen_turn": c.last_seen_turn}
             for c in world.list(Character, session_id)
         ],
         "locations": [

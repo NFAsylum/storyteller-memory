@@ -2,100 +2,191 @@
 
 Formato: `[ ]` pendente, `[x]` feita. Nunca marcar feita se DoD não é 100% verificável. Nunca continuar próximo sprint sem "verificação final" do anterior aprovada.
 
-Total: 110 h. Ordem sequencial dentro do sprint, mas tarefas dentro do mesmo sprint podem ser feitas em paralelo se não têm dependência.
+**Total revisado: ~130 h.** Sprint 1-2 são "Fake wiring" — todo o esqueleto sem chamada LLM real. Sprint 3 (novo) é onde pela primeira vez plugamos Anthropic real + medimos baseline. Isso segue o padrão: infra + protocol + Fake → primeiro impl real + medição.
+
+**Papel do LLM neste projeto:** o LLM é o **motor narrativo** — fixo, não vamos treinar. O trabalho é construir infra (memória, reflection, retrieval, harness) que faça o **mesmo** LLM performar melhor. O LLM é o sujeito da medição.
+
+**Design principle:** `LlmClient` como Protocol. `FakeLlmClient` (respostas templadas, determinísticas) pra dev/testes. `AnthropicLlmClient` (Sprint 3+) pra medição real. Config switch via env var `LLM_BACKEND=fake|anthropic`.
 
 ---
 
-## Sprint 1 — Fundação mensurável (20 h)
+## Sprint 1 — Skeleton + Fake wiring (20 h) — **ZERO API real**
 
-### [ ] S1.1 — Setup do projeto (3 h)
-Criar estrutura: Poetry, dependências, docker-compose.yml com Postgres, .env.example.
-**DoD:**
-- `docker compose up -d` sobe Postgres na porta 5432
-- `poetry install` termina sem erro
-- `poetry run pytest` executa (0 testes por enquanto, mas exit code 0)
-- `.env.example` lista `ANTHROPIC_API_KEY`, `DATABASE_URL`
+### [x] S1.1 — Setup do projeto (3 h)
+Criar estrutura: Poetry, dependências, `.env.example`. **SQLite** pra dev.
+**DoD:** ✅ concluído
 
-### [ ] S1.2 — `core/llm_client.py` (3 h)
+### [x] S1.2 — `core/llm_client.py` (3 h) — precisa retrofit
 Wrapper Anthropic SDK com retry, timeout, cost logging.
+**Retrofit necessário (blocker pra rodar sem API key):**
+- Extrair `LlmClient` como Protocol em `core/llm_client.py`
+- Renomear wrapper atual pra `AnthropicLlmClient` (impl do Protocol)
+- Adicionar `FakeLlmClient` em `core/llm_fakes.py` — retorna resposta templada determinística baseada em hash do prompt
+- Config switch: `create_llm_client()` factory lê `LLM_BACKEND` env var (default `fake` em dev)
+- Testes atuais (mockados) continuam verdes; adicionar 3 testes pro FakeLlmClient
 **DoD:**
-- `tests/test_llm_client.py` cobre: chamada sucesso, retry após 429 (mock), timeout retorna erro específico
-- `LlmClient.generate()` retorna `LlmResponse` com `cost_usd` calculado (input tokens × price + output × price, tabela hardcoded)
-- `pytest tests/test_llm_client.py` verde
+- `LlmClient` Protocol definido com `.generate()` retornando `LlmResponse`
+- `AnthropicLlmClient` e `FakeLlmClient` implementam o Protocol
+- `create_llm_client()` respeita `LLM_BACKEND`
+- Sem `ANTHROPIC_API_KEY` no env, `FakeLlmClient` funciona 100%
+- `pytest tests/test_llm_client.py` verde (originais + 3 novos)
 
-### [ ] S1.3 — `core/story_loop.py` v1 (5 h)
-Turn manager mínimo: input → LLM → armazena em mem0 (sem world state ainda).
+### [x] S1.3 — `core/story_loop.py` v1 (5 h) — retrofit + integração
+Turn manager mínimo: input → LLM (via Protocol) → armazena em mem0.
+**Nota:** código do story_loop já existe. Precisa apontar pro Protocol em vez do wrapper Anthropic direto. `scripts/manual_test.py` deve rodar com FakeLlmClient por default.
 **DoD:**
+- `StoryLoop.__init__` aceita `llm_client: LlmClient` (Protocol)
 - `StoryLoop.run_turn(text)` retorna `TurnResult` com `narrator_text` não-vazio
-- Script `scripts/manual_test.py` roda 5 turnos consecutivos numa session, prints legíveis
-- Cada turn escreve entrada correspondente em mem0 (verificado via `mem0_adapter.list_all()`)
+- `scripts/manual_test.py` roda 5 turnos com FakeLlmClient (sem `ANTHROPIC_API_KEY` no env), prints determinísticos e legíveis
+- Cada turn escreve entrada correspondente em mem0 (verificado via `mem0_adapter.list_all()` = 5 depois de 5 turnos)
+- Testes com Fake substituem os mocks manuais (mais robusto)
 
-### [ ] S1.4 — `eval/harness.py` v1 (6 h)
-Carrega scenario JSON, roda N turnos, faz M perguntas, retorna métricas.
+### [x] S1.4 — Scenario/Question Pydantic models + loader (3 h)
+Modelos pra representar cenários de teste. Ainda sem harness — só shape.
 **DoD:**
-- `harness.run_scenario(scenario, config)` retorna `ScenarioResult` com `recall_rate` calculado
-- Recall check: LLM-as-judge simples (pergunta se `ground_truth` ou `acceptable_variants` aparecem na resposta)
-- `pytest tests/test_harness.py` cobre 1 mini-scenario end-to-end
+- `Scenario` Pydantic model: `id, scenes: list[Scene], questions: list[Question]`
+- `Scene`: `turn_id, user_input`
+- `Question`: `id, asked_after_turn, category, question, ground_truth, acceptable_variants`
+- `load_scenario(path) -> Scenario` valida JSON contra o model
+- 3 testes: load válido, load com JSON malformado falha claro, load com pergunta sem ground_truth falha claro
 
-### [ ] S1.5 — 3 cenários seed (3 h)
+### [x] S1.5 — 3 cenários seed (3 h)
 Escrever `eval/scenarios/seed_01.json`, `seed_02.json`, `seed_03.json`. Cada um: 5 cenas, 10 perguntas cobrindo recall factual.
 **DoD:**
-- Cada JSON valida contra `Scenario` Pydantic model
+- Cada JSON valida contra `Scenario` model (S1.4)
 - Cada pergunta tem `ground_truth` e `category`
 - Documentado em `eval/scenarios/README.md` como escrever novos
 
+### [x] S1.6 — Manual test completo com Fake (3 h)
+Verificar wiring end-to-end sem chamada real.
+**DoD:**
+- `scripts/manual_test.py`: cria session, roda 5 turnos com FakeLlmClient, imprime narrator_text de cada turn, imprime `mem0_adapter.list_all()` no fim
+- Output é **determinístico** dado seed (5 execuções produzem output idêntico)
+- Roda sem `ANTHROPIC_API_KEY` no env
+
 ### Verificação final Sprint 1
-- [ ] Rodar `poetry run python -m eval.run_all_scenarios --config=baseline_mem0_only`
-- [ ] Gravar resultado em `results.md` (criar arquivo)
-- [ ] Format: `sprint 1 baseline: N of 30 recall (X%)`
-- [ ] Se `recall < 40%`, **para e escala pro humano** — mem0 pode estar mal configurado
+- [x] `pytest` inteiro verde (31 testes)
+- [x] `unset ANTHROPIC_API_KEY && LLM_BACKEND=fake poetry run python scripts/manual_test.py` roda até o fim, imprime 5 turnos + list_all()
+- [x] Nenhum acesso a API real durante toda a Sprint 1
 
 ---
 
-## Sprint 2 — World state + reflection (20 h)
+## Sprint 2 — World state + reflection (Fake ainda) (20 h) — **ZERO API real**
 
-### [ ] S2.1 — Schema Postgres + migrations (4 h)
-Criar tabelas: `characters`, `locations`, `relations`, `story_beats`. Usar Alembic.
+Constrói mecânica de memória estruturada. Ainda com Fake — validamos estrutura, não qualidade.
+
+### [x] S2.1 — Schema SQLite + migrations (4 h)
+Criar tabelas via SQLAlchemy 2.0: `characters`, `locations`, `relations`, `story_beats`. Alembic pra migrations. **Tipos portáveis SQLite ↔ Postgres** (`JSON` genérico, não JSONB; sem ARRAY — traits/tags como JSON list).
 **DoD:**
-- `alembic upgrade head` cria as 4 tabelas
+- `alembic upgrade head` cria as 4 tabelas no SQLite
 - Seed script `scripts/seed_test_data.py` insere 3 personagens fake, roda sem erro
 - `pytest tests/test_world_state.py` cobre CRUD básico das 4 entidades
+- Nenhum tipo Postgres-only nas migrations (grep por `JSONB`, `ARRAY`, `postgresql.` retorna 0)
 
-### [ ] S2.2 — `core/memory/reflection.py` (8 h)
-A cada 5 turnos, LLM sumariza episódio em JSON estruturado, persiste em world_state.
+### [x] S2.2 — Reflection Protocol + FakeReflection (6 h)
+`Reflection` como Protocol. Fake implementation retorna JSON estruturado determinístico baseado nos turnos.
 **DoD:**
-- `Reflection.consolidate(session_id, since_turn)` retorna `ReflectionResult` com contagens não-negativas
-- Prompt de reflection em `core/prompts/reflection.txt`
-- Teste: mock LLM retorna JSON estruturado; teste verifica que 2 personagens e 1 relation foram criados
-- Script `scripts/manual_reflection_test.py` roda em session real, verifica que story_beats foi populado
+- `Reflection` Protocol: `consolidate(session_id, since_turn) -> ReflectionResult`
+- `FakeReflection` extrai personagens de forma mecânica: qualquer palavra iniciada em maiúscula > 2x nos turnos vira personagem candidato (regra simples), grava em Postgres/SQLite
+- `AnthropicReflection` fica pra Sprint 3 — não implementar ainda
+- `ReflectionResult`: `beats_created, characters_updated, relations_updated, cost_usd`
+- Prompt template em `core/prompts/reflection.txt` (usado só na Sprint 3)
+- 5 testes: turnos vazios, turnos com 1 personagem, turnos com múltiplos, evento repetido não duplica, ReflectionResult tem contagens não-negativas
 
-### [ ] S2.3 — `core/memory/retrieval_policy.py` (4 h)
+### [x] S2.3 — `core/memory/retrieval_policy.py` (4 h)
 Bundle de contexto para próximo turn.
 **DoD:**
 - `RetrievalPolicy.build_context(session_id, turn, user_input)` retorna `ContextBundle` com 4 chaves populadas
 - Estimativa de tokens em `token_estimate` (aproximação: 4 chars ≈ 1 token)
 - Teste: dado session seed, retorna >0 memories e >0 active_characters
 
-### [ ] S2.4 — Integrar retrieval no story_loop (4 h)
-Story_loop v2 usa retrieval_policy antes de chamar LLM. Prompt inclui context bundle.
+### [x] S2.4 — Integrar retrieval + reflection no story_loop (4 h)
+Story_loop v2 usa `RetrievalPolicy` antes de chamar LLM. Prompt inclui context bundle. Reflection roda a cada 5 turnos.
 **DoD:**
-- `StoryLoop.run_turn()` agora chama `RetrievalPolicy.build_context()` e injeta no prompt
-- `TurnResult.retrieved_context` populado com o bundle usado
-- Manual test de 15 turnos: turns 6+ visivelmente referenciam eventos dos turns 1-5
+- `StoryLoop.run_turn()` chama `RetrievalPolicy.build_context()` e injeta no prompt (via FakeLlmClient)
+- `TurnResult.retrieved_context` populado com o bundle
+- Manual test de 15 turnos com Fake: reflection dispara em turns 5, 10, 15; world_state tem entries
+- Turnos 6+ visivelmente referenciam eventos anteriores via bundle (mesmo com Fake, o bundle chega no prompt)
+
+### [x] S2.5 — Manual test estrutural (2 h)
+End-to-end sem LLM real. Verifica que os DADOS fluem certo.
+**DoD:**
+- `scripts/manual_test_sprint2.py`: 15 turnos com Fake → verifica: tabelas populadas, reflection disparou 3x, retrieval retornou >0 items nos últimos 10 turnos
+- Output determinístico
+- Nenhum `ANTHROPIC_API_KEY` no env
 
 ### Verificação final Sprint 2
-- [ ] Rodar `poetry run python -m eval.run_all_scenarios --config=mem0_plus_reflection`
-- [ ] Gravar delta em `results.md`
-- [ ] Format: `sprint 2: N of 30 recall (X%), delta vs baseline: +Ypp`
-- [ ] Se `delta < 5pp`, **para e escala** — decisão: investir mais em custom OU pivotar pra Zep (custo estimado do pivô: ~15 h)
+- [x] `pytest` inteiro verde (52 testes)
+- [x] `unset ANTHROPIC_API_KEY && poetry run python scripts/manual_test_sprint2.py` roda até o fim, mostra que world_state populou
+- [x] Estrutura de dados verificada: characters/locations/relations/story_beats existem e têm registros
 
 ---
 
-## Sprint 3 — Harness formal + iteração (20 h)
+## Sprint 3 — Real LLM + first measurement (20 h) — **PRIMEIRA VEZ QUE PRECISA DE API KEY**
 
-### [ ] S3.1 — Expandir para 30 perguntas / 5 cenários (6 h)
+Onde plugamos Anthropic real e rodamos o primeiro baseline mensurável. Se você (marco) ainda não tem API key, esse é o momento — instância vai parar aqui e escalar.
+
+### [x] S3.1 — Validar AnthropicLlmClient + config switch (3 h)
+Wrapper já existe (S1.2). Aqui garantimos que roda contra API real com key válida.
+**DoD:**
+- `LLM_BACKEND=anthropic ANTHROPIC_API_KEY=sk-ant-... poetry run python scripts/smoke_llm.py "hello"` retorna resposta real
+- Custo logado no output (~$0.001)
+- Rate limit (429) faz backoff automático
+- Timeout config funcional
+
+> **Adaptado pro backend local (inbox 2026-07-11):** Sprint 3 roda com `LLM_BACKEND=local`. Validado com `scripts/smoke_llm.py` (genérico, agnóstico de backend) → resposta real do Qwen ("Blue.", ~5s, cost $0). Config switch fake/anthropic/local + inválido coberto no factory. O 429-backoff e o timeout→`LlmTimeoutError` do `AnthropicLlmClient` seguem cobertos pelos unit tests do S1.2 (wrapper inalterado). Rodar contra Anthropic real (custo ~$0.001) fica opcional pra quando houver key paga.
+
+### [x] S3.2 — `AnthropicReflection` (4 h)
+Impl real de `Reflection` Protocol. Prompt em `core/prompts/reflection.txt` gera JSON estruturado.
+**DoD:**
+- `AnthropicReflection.consolidate(...)` chama LLM real com prompt de reflection
+- Response JSON valida contra schema estruturado (characters, locations, relations, beats)
+- Retry se JSON malformado (max 2 retries com feedback)
+- Teste manual: rodar em session de 10 turnos, verificar que story_beats populou com summaries reais
+- Custo por reflection registrado (~$0.01-0.05)
+
+> **Impl como `LlmReflection` (genérica, recebe `LlmClient`) em vez de `AnthropicReflection`** — roda com o backend configurado (local, per inbox). Verificado real: `LLM_BACKEND=local scripts/manual_reflection_test.py` → 10 turnos + reflection do Qwen → JSON válido, `story_beats` com 3 summaries reais, chars=3/locs=2/rels=3, cost $0 (local), 99s. Retry de JSON malformado (max 2 com feedback) implementado + unit-tested (12 testes de reflection). Custo Anthropic (~$0.01-0.05) é $0 no backend local.
+
+### [x] S3.3 — `eval/harness.py` v1 (6 h)
+Carrega scenario, roda N turnos, faz M perguntas, retorna métricas.
+**DoD:**
+- `harness.run_scenario(scenario, config)` retorna `ScenarioResult` com `recall_rate`, `avg_cost_usd`
+- Recall check via LLM-as-judge simples (pergunta se `ground_truth` ou `acceptable_variants` aparecem)
+- Config permite escolher backend (fake pra sanity check, anthropic pra medição real)
+- `pytest tests/test_harness.py` cobre 1 mini-scenario com FakeLlm (rápido, determinístico)
+
+### [x] S3.4 — `eval/judges.py` v1 (4 h)
+LLM-as-judge pra recall check + hallucination detection.
+**DoD:**
+- `judge_recall(question, response) -> Literal["YES", "NO", "PARTIAL"]`
+- `judge_hallucination(ground_truth, response) -> bool`
+- Prompts em `eval/prompts/`
+- Testado com mock em 3 casos por função
+
+### [x] S3.5 — First baseline measurement (3 h)
+Rodar harness com Anthropic real. Escrever `results.md`.
+**DoD:**
+- `LLM_BACKEND=anthropic poetry run python -m eval.run_all_scenarios --config=baseline_mem0_only` roda
+- Idem com `--config=mem0_plus_reflection`
+- `results.md` criado com:
+  - `sprint 3 baseline (mem0 only): N of 30 recall (X%)`
+  - `sprint 3 augmented (mem0 + reflection): N of 30 recall (Y%)`
+  - `delta: +Zpp`
+  - Custo total: $X.XX
+- Se `delta < 5pp`, escala pro humano — decisão: mais tuning na reflection ou pivotar
+
+### Verificação final Sprint 3
+- [x] `results.md` existe com dois números medidos
+- [x] Custo total do sprint documentado ($0 — modelo local, sem custo de API)
+- [x] Se resultado for surpreendente (baseline muito baixo ou delta negativo), diagnóstico documentado
+
+---
+
+## Sprint 4 — Iteração + harness expandido (20 h)
+
+### [x] S4.1 — Expandir para 30 perguntas / 5 cenários (6 h)
 Cobrir 5 categorias:
-- `recall_factual` (10 perguntas)
+- `recall_factual` (10)
 - `character_consistency` (6)
 - `relation_evolution` (6)
 - `world_state` (4)
@@ -103,138 +194,135 @@ Cobrir 5 categorias:
 
 **DoD:**
 - `eval/scenarios/full/` tem 5 arquivos JSON
-- Cada pergunta tem `category` de uma das 5 acima
-- Total 30 perguntas somando todos os cenários
+- Cada pergunta tem `category`
+- Total 30 perguntas
 - `poetry run python -m eval.count_questions` retorna 30
 
-### [ ] S3.2 — `eval/judges.py` (6 h)
-LLM-as-judge para métricas subjetivas.
-**DoD:**
-- `judge_consistency(character_profile, generated_text) -> float [0,1]`
-- `judge_hallucination(ground_truth, generated_text) -> bool`
-- 5 exemplos manuais em `eval/judges_calibration.json` com score humano
-- Rodar `poetry run python -m eval.calibrate_judges`: mostra concordância humano/LLM; **DoD: >80%**
+### [ ] S4.2 — Judges subjetivos (6 h)
 
-### [ ] S3.3 — Iterar prompt + retrieval (6 h)
-Testar 4 variantes de prompt/policy; medir cada uma.
+> **Parcial (decisão C, 2026-07-11):** `judge_consistency(character_profile, response) -> float [0,1]` implementado + testado (mock). A **calibração** (`judges_calibration.json` com scores humanos + `calibrate_judges` + gate >80%) fica **adiada** até Marco fornecer os scores humanos de referência. Não marcar [x] até calibrar.
+Expandir `judges.py` com consistency + hallucination detection subjetiva.
 **DoD:**
-- Tabela em `docs/experiments.md` com 4 variantes:
-  - Variantes de system prompt (2)
-  - Variantes de estratégia de retrieval (2)
-- Cada linha: `variant_id`, `recall_rate`, `consistency_score`, `hallucination_rate`, `avg_cost_per_turn`
-- Winner selecionado com justificativa (1 parágrafo)
+- `judge_consistency(character_profile, response) -> float [0,1]`
+- 5 exemplos manuais em `eval/judges_calibration.json` com score humano
+- Rodar `poetry run python -m eval.calibrate_judges`: concordância humano/LLM >80%
+
+### [x] S4.3 — Iterar prompt + retrieval (6 h)
+Testar 4 variantes, medir cada uma.
+**DoD:**
+- Tabela em `docs/experiments.md` com 4 variantes (2 prompt + 2 retrieval)
+- Cada linha: `variant_id, recall_rate, consistency_score, hallucination_rate, avg_cost_per_turn`
+- Winner selecionado com justificativa
 - Config vencedora salva como `configs/best.yaml`
 
-### [ ] S3.4 — Documentar experiments (2 h)
+### [ ] S4.4 — Documentar experiments (2 h)
 **DoD:**
-- `docs/experiments.md` tem: método, tabela de resultados, decisão final, próximos experimentos sugeridos
+- `docs/experiments.md`: método, tabela, decisão, próximos experimentos
 - README linka essa seção
 
-### Verificação final Sprint 3
-- [ ] Rodar `poetry run python -m eval.run_all_scenarios --config=configs/best.yaml`
-- [ ] Gravar em `results.md`: número final que vai no portfólio
-- [ ] Se abaixo do baseline do Sprint 1, algo quebrou — para e diagnostica
+### Verificação final Sprint 4
+- [ ] Rodar `--config=configs/best.yaml` — número final que vai no portfólio
+- [ ] Se abaixo do baseline do Sprint 3, algo quebrou — para e diagnostica
+- [ ] Custo total do sprint documentado (esperado: $3-8)
 
 ---
 
-## Sprint 4 — Frontend + memory inspector (20 h)
+## Sprint 5 — Frontend + memory inspector (20 h)
 
-### [ ] S4.1 — Streamlit chat base (6 h)
+### [ ] S5.1 — Streamlit chat base (6 h)
 Chat mensagens + input + session_id persistente em cookie.
 **DoD:**
 - `streamlit run ui/app.py` abre chat funcional
-- Recarregar página mantém a session (cookie válido por 30 dias)
+- Recarregar página mantém a session (cookie 30 dias)
 - Cada mensagem chama `POST /sessions/{id}/turn`
-- Erros de API mostram toast, não crashe
+- Erros de API mostram toast, não crash
 
-### [ ] S4.2 — Sidebar Memory Inspector (8 h)
+### [ ] S5.2 — Sidebar Memory Inspector (8 h)
 3 abas: `Memories`, `World State`, `Reflections`.
 **DoD:**
-- Aba `Memories`: lista raw memories do mem0 com timestamp, similaridade com último turn
+- Aba `Memories`: raw mem0 com timestamp, similaridade com último turn
 - Aba `World State`: tabelas de chars/locs/rels/beats, filtro por session
-- Aba `Reflections`: story_beats agrupados por batch de reflection
+- Aba `Reflections`: story_beats agrupados por batch
 - Cada aba tem botão refresh que re-fetcha via API
 
-### [ ] S4.3 — Botões debug (4 h)
+### [ ] S5.3 — Botões debug (4 h)
 Sidebar tem 3 botões:
 - `Force reflection now` → `POST /sessions/{id}/reflect`
 - `Show retrieved this turn` → expander com último `ContextBundle`
 - `Clear session` → `DELETE /sessions/{id}` + reload
 
 **DoD:**
-- Cada botão executa e mostra feedback visual (success/error)
+- Cada botão executa e mostra feedback visual
 - Confirmação modal em `Clear session`
 
-### [ ] S4.4 — Persistência de session (2 h)
-Autosave + resume: fechar e reabrir mantém contexto.
+### [ ] S5.4 — Persistência de session (2 h)
+Autosave + resume.
 **DoD:**
 - Teste manual: encerra Streamlit, reabre 24h depois (fake via env), context preservado
-- Session record em Postgres tem `last_active_at` atualizado a cada turno
+- Session record em SQLite/Postgres tem `last_active_at` atualizado
 
-### Verificação final Sprint 4
+### Verificação final Sprint 5
 - [ ] Testar UI em navegador por 30 min sem crash
-- [ ] Fazer walkthrough gravado do memory inspector (screenshot ou GIF)
-- [ ] Adicionar screenshot no `README.md` (criar se não existe)
+- [ ] Screenshot do memory inspector no `README.md`
 
 ---
 
-## Sprint 5 — Deploy + polish (20 h)
+## Sprint 6 — Deploy + polish + migração SQLite → Postgres (20 h)
 
-### [ ] S5.1 — Dockerize backend + frontend (6 h)
-Multi-stage Dockerfiles.
+### [ ] S6.1 — Dockerize backend + frontend (6 h)
 **DoD:**
 - `docker build -f Dockerfile.api .` produz imagem <500MB
 - `docker build -f Dockerfile.ui .` produz imagem <300MB
-- `docker compose up` sobe API + UI + Postgres em modo dev
-- Testes de smoke passam contra API dockerizado
+- Smoke test passa contra API dockerizado
 
-### [ ] S5.2 — Deploy Fly.io (6 h)
-API + UI + Fly Postgres.
+### [ ] S6.2 — Deploy Fly.io + migração SQLite → Postgres (8 h)
+Momento planejado de trocar SQLite → Postgres.
 **DoD:**
-- `fly.toml` para API + UI
-- `fly deploy` sucede sem erros
-- `fly secrets set ANTHROPIC_API_KEY=... DATABASE_URL=...` — nenhuma secret em código
+- Fly Postgres provisionado; `DATABASE_URL` prod aponta pra ele
+- `alembic upgrade head` roda contra Postgres remoto (schema portável desde Sprint 2)
+- Smoke: criar sessão, gerar 3 turnos, verificar persistência
+- `fly deploy` sucede
+- Secrets via `fly secrets`
 - URL público responde `GET /health` com 200
+- Dev local continua com SQLite
 
-### [ ] S5.3 — README (5 h)
+### [ ] S6.3 — README (5 h)
 **DoD:**
-- Seções: Problema, Arquitetura, Resultados do harness (tabela), Como rodar local, Como deployar, Limitações conhecidas
+- Seções: Problema, Arquitetura, Resultados do harness (tabela), Como rodar local, Deploy, Limitações
 - Screenshot do Memory Inspector
-- Reader externo consegue rodar local em <10 min seguindo o README
-- Testar: pedir pra alguém não-familiarizado seguir README
+- Reader externo roda local em <10 min
 
-### [ ] S5.4 — Landing/GIF (3 h)
-Cria GIF de 20-30s mostrando recall cross-session.
+### [ ] S6.4 — Landing/GIF (3 h)
+GIF de 20-30s mostrando recall cross-session.
 **DoD:**
 - GIF <5MB
 - Mostra: sessão 1 (evento A), fecha, sessão 2 (LLM lembra de A)
 - Embarcado no README
 
-### [ ] S5.5 — Bugfixes e polish (4 h)
+### [ ] S6.5 — Bugfixes e polish (4 h) — reservado do buffer geral
 **DoD:**
 - Rodar happy path por 30 min sem erro
-- Todos os warnings do pytest resolvidos
-- Nenhum TODO/FIXME crítico no código
+- Warnings do pytest resolvidos
+- Nenhum TODO/FIXME crítico
 
-### Verificação final Sprint 5
-- [ ] URL público funcional compartilhado com humano
+### Verificação final Sprint 6
+- [ ] URL público funcional compartilhado
 - [ ] README validado
-- [ ] Números do harness embarcados no README
+- [ ] Números do harness embutidos no README
 
 ---
 
-## Sprint 6 — Buffer + demo (10 h)
+## Sprint 7 — Buffer + demo (10 h)
 
-### [ ] S6.1 — Buffer dívidas técnicas (5 h)
-Endereçar qualquer TODO acumulado ou bug relatado.
+### [ ] S7.1 — Buffer dívidas técnicas (5 h)
 
-### [ ] S6.2 — Demo video 2-3 min (3 h)
-Roteiro: sessão 1 → fecha → sessão 2 uma semana depois (fake) → mostra memory inspector → mostra números do harness.
+### [ ] S7.2 — Demo video 2-3 min (3 h)
+Roteiro: sessão 1 → fecha → sessão 2 uma semana depois (fake) → memory inspector → números do harness.
 **DoD:**
 - Video gravado, hospedado (Loom/YouTube)
 - Link no README
 
-### [ ] S6.3 — Post técnico curto (2 h)
+### [ ] S7.3 — Post técnico curto (2 h)
 LinkedIn + dev.to.
 **DoD:**
 - 300-500 palavras
@@ -245,11 +333,12 @@ LinkedIn + dev.to.
 
 ## Estimativas resumidas
 
-| Sprint | Total | Cumulativo |
-|---|---:|---:|
-| 1 | 20 h | 20 h |
-| 2 | 20 h | 40 h |
-| 3 | 20 h | 60 h |
-| 4 | 20 h | 80 h |
-| 5 | 20 h | 100 h |
-| 6 | 10 h | 110 h |
+| Sprint | Total | Cumulativo | LLM real? |
+|---|---:|---:|---:|
+| 1 | 20 h | 20 h | Fake |
+| 2 | 20 h | 40 h | Fake |
+| 3 | 20 h | 60 h | **Sim** |
+| 4 | 20 h | 80 h | Sim |
+| 5 | 20 h | 100 h | Só demo |
+| 6 | 20 h | 120 h | Só demo |
+| 7 | 10 h | 130 h | Demo |

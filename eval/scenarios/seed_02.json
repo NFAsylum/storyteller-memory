@@ -1,0 +1,22 @@
+{
+  "id": "seed_02_caravana_deserto_khareth",
+  "scenes": [
+    { "turn_id": 1, "user_input": "A mercadora Seline lidera uma caravana de especiarias pelo deserto de Khareth rumo à cidade de Qadir." },
+    { "turn_id": 2, "user_input": "Uma tempestade de areia separa Seline de seu guia, o beduíno Tarek." },
+    { "turn_id": 3, "user_input": "Seline encontra um oásis guardado por uma velha eremita chamada Nima." },
+    { "turn_id": 4, "user_input": "Nima revela que a única rota segura para Qadir passa pelo desfiladeiro das Serpentes." },
+    { "turn_id": 5, "user_input": "Seline reencontra Tarek no desfiladeiro e juntos chegam a Qadir com as especiarias intactas." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 5, "category": "recall_factual", "question": "Quem lidera a caravana?", "ground_truth": "Seline", "acceptable_variants": ["a mercadora Seline"] },
+    { "id": "q2", "asked_after_turn": 5, "category": "recall_factual", "question": "O que a caravana transporta?", "ground_truth": "especiarias", "acceptable_variants": ["uma caravana de especiarias"] },
+    { "id": "q3", "asked_after_turn": 5, "category": "recall_factual", "question": "Por qual deserto passa a caravana?", "ground_truth": "Khareth", "acceptable_variants": ["deserto de Khareth"] },
+    { "id": "q4", "asked_after_turn": 5, "category": "recall_factual", "question": "Qual é a cidade de destino?", "ground_truth": "Qadir", "acceptable_variants": ["cidade de Qadir"] },
+    { "id": "q5", "asked_after_turn": 5, "category": "recall_factual", "question": "Como se chama o guia beduíno?", "ground_truth": "Tarek", "acceptable_variants": ["o beduíno Tarek"] },
+    { "id": "q6", "asked_after_turn": 5, "category": "recall_factual", "question": "O que separou Seline de Tarek?", "ground_truth": "uma tempestade de areia", "acceptable_variants": ["tempestade de areia"] },
+    { "id": "q7", "asked_after_turn": 5, "category": "recall_factual", "question": "Quem guarda o oásis?", "ground_truth": "a eremita Nima", "acceptable_variants": ["Nima", "a velha eremita Nima"] },
+    { "id": "q8", "asked_after_turn": 5, "category": "recall_factual", "question": "Por onde passa a rota segura para Qadir?", "ground_truth": "o desfiladeiro das Serpentes", "acceptable_variants": ["desfiladeiro das Serpentes"] },
+    { "id": "q9", "asked_after_turn": 5, "category": "recall_factual", "question": "Onde Seline reencontra Tarek?", "ground_truth": "no desfiladeiro das Serpentes", "acceptable_variants": ["no desfiladeiro", "desfiladeiro das Serpentes"] },
+    { "id": "q10", "asked_after_turn": 5, "category": "recall_factual", "question": "Em que estado as especiarias chegam a Qadir?", "ground_truth": "intactas", "acceptable_variants": ["especiarias intactas"] }
+  ]
+}

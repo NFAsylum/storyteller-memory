@@ -1,0 +1,8 @@
+# Config vencedora do S4.3 (escolhida por recall_rate)
+name: qa_base
+use_retrieval: true
+use_reflection: false
+top_memories: 5
+reflect_every: 5
+qa_prompt: base
+recall_rate: 0.6333

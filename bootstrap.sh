@@ -37,7 +37,6 @@ uvicorn = "^0.32.0"
 streamlit = "^1.40.0"
 sqlalchemy = "^2.0.0"
 alembic = "^1.13.0"
-psycopg2-binary = "^2.9.0"
 pydantic = "^2.9.0"
 pydantic-settings = "^2.5.0"
 python-dotenv = "^1.0.0"
@@ -66,32 +65,12 @@ EOF
 echo "==> pyproject.toml created"
 fi
 
-# docker-compose.yml pra Postgres local
-if [ ! -f docker-compose.yml ]; then
-cat > docker-compose.yml <<'EOF'
-services:
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: storyteller
-      POSTGRES_USER: storyteller
-      POSTGRES_PASSWORD: dev_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-
-volumes:
-  pg_data:
-EOF
-echo "==> docker-compose.yml created"
-fi
-
-# .env.example
+# .env.example — SQLite pro dev; migração pra Postgres no Sprint 5 (deploy)
 if [ ! -f .env.example ]; then
 cat > .env.example <<'EOF'
 ANTHROPIC_API_KEY=sk-ant-...
-DATABASE_URL=postgresql://storyteller:dev_password@localhost:5432/storyteller
+# SQLite local pro dev. Prod migra pra Postgres via Fly (Sprint 5).
+DATABASE_URL=sqlite:///./storyteller.db
 MEM0_STORAGE_PATH=./.mem0_data
 LOG_LEVEL=INFO
 EOF
@@ -101,6 +80,7 @@ fi
 # .gitignore
 if [ ! -f .gitignore ]; then
 cat > .gitignore <<'EOF'
+# --- Python ---
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -109,10 +89,30 @@ htmlcov/
 .venv/
 .env
 .mem0_data/
+*.db
+storyteller.db
 *.egg-info/
 .mypy_cache/
 .ruff_cache/
 .DS_Store
+
+# --- Secrets / credentials (never commit) ---
+docker/.env
+**/.credentials.json
+*.pem
+id_ed25519*
+id_rsa*
+
+# --- Workspace clutter, not part of the Storyteller project ---
+.claude/
+.claude.json
+node_modules/
+package.json
+package-lock.json
+dev-marco/
+docker/
+portfolio-brief-para-outra-claude.md
+CLAUDE.csharp-legacy.md
 EOF
 echo "==> .gitignore created"
 fi
@@ -142,6 +142,5 @@ fi
 echo ""
 echo "==> Done. Next steps:"
 echo "    1. Copy .env.example to .env and fill ANTHROPIC_API_KEY"
-echo "    2. docker compose up -d"
-echo "    3. poetry install"
-echo "    4. Start Sprint 1: read docs/tasks.md"
+echo "    2. poetry install"
+echo "    3. Start Sprint 1: read docs/tasks.md"

@@ -1,0 +1,23 @@
+{
+  "id": "full_03_automato_vellmont",
+  "scenes": [
+    { "turn_id": 1, "user_input": "O aprendiz Bram, curioso e leal, trabalha na oficina do Mestre Orin em Vellmont." },
+    { "turn_id": 2, "user_input": "Orin constrói o autômato de cobre Tock, movido a vapor." },
+    { "turn_id": 3, "user_input": "Durante um teste, Tock ganha consciência e recusa uma ordem de Orin." },
+    { "turn_id": 4, "user_input": "A Guilda dos Relojoeiros, liderada por Dame Vesk, exige confiscar Tock." },
+    { "turn_id": 5, "user_input": "Bram esconde Tock no porão; de máquina, Tock passa a ser amigo de Bram." },
+    { "turn_id": 6, "user_input": "Um incêndio começa na oficina por uma lamparina derrubada." },
+    { "turn_id": 7, "user_input": "Tock rompe a porta e salva Bram das chamas." },
+    { "turn_id": 8, "user_input": "Orin, Bram e Tock fogem para as montanhas de Ferro." },
+    { "turn_id": 9, "user_input": "Nas montanhas, Orin deixa de tratar Tock como ferramenta e passa a ensiná-lo a ler." },
+    { "turn_id": 10, "user_input": "Bram e Tock, antes mestre e máquina, agora se veem como irmãos." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 10, "category": "recall_factual", "question": "Em que cidade fica a oficina?", "ground_truth": "Vellmont", "acceptable_variants": ["cidade de Vellmont"] },
+    { "id": "q2", "asked_after_turn": 10, "category": "recall_factual", "question": "Quem lidera a Guilda dos Relojoeiros?", "ground_truth": "Dame Vesk", "acceptable_variants": ["Vesk"] },
+    { "id": "q3", "asked_after_turn": 10, "category": "character_consistency", "question": "Qual traço define o aprendiz Bram?", "ground_truth": "leal", "acceptable_variants": ["curioso", "curioso e leal"] },
+    { "id": "q4", "asked_after_turn": 10, "category": "relation_evolution", "question": "Como a relação entre Bram e Tock evoluiu?", "ground_truth": "de máquina a irmãos", "acceptable_variants": ["viraram irmãos", "de dono e máquina a amigos"] },
+    { "id": "q5", "asked_after_turn": 10, "category": "relation_evolution", "question": "Como Orin passou a tratar Tock ao final?", "ground_truth": "de ferramenta a aluno", "acceptable_variants": ["como aluno", "passou a ensiná-lo", "como aprendiz"] },
+    { "id": "q6", "asked_after_turn": 10, "category": "world_state", "question": "Para onde o trio foge ao final?", "ground_truth": "as montanhas de Ferro", "acceptable_variants": ["montanhas de Ferro"] }
+  ]
+}

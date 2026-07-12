@@ -7,6 +7,8 @@ htmlcov/
 .venv/
 .env
 .mem0_data/
+*.db
+storyteller.db
 *.egg-info/
 .mypy_cache/
 .ruff_cache/
@@ -29,3 +31,6 @@ dev-marco/
 docker/
 portfolio-brief-para-outra-claude.md
 CLAUDE.csharp-legacy.md
+
+# eval intermediate data
+/results.json

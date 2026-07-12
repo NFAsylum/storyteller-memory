@@ -1,0 +1,23 @@
+{
+  "id": "full_01_traicao_aldrath",
+  "scenes": [
+    { "turn_id": 1, "user_input": "Aria, cavaleira leal ao rei Doran, chega ao castelo de Aldrath." },
+    { "turn_id": 2, "user_input": "A capitã da guarda, Nyra, recebe Aria e a apresenta à corte." },
+    { "turn_id": 3, "user_input": "O conselheiro Vex, homem frio e ambicioso, entrega um tratado ao rei." },
+    { "turn_id": 4, "user_input": "Aria vê Vex escondendo uma carta do reino de Morwyn na galeria oeste." },
+    { "turn_id": 5, "user_input": "Aria, cautelosa, decide reunir provas antes de acusar Vex." },
+    { "turn_id": 6, "user_input": "Vex contrata em segredo o assassino Kellan para matar Aria." },
+    { "turn_id": 7, "user_input": "Kellan ataca Aria, mas ela o poupa; de inimigos, tornam-se aliados." },
+    { "turn_id": 8, "user_input": "Kellan revela que Vex planeja envenenar o rei no banquete." },
+    { "turn_id": 9, "user_input": "O rei Doran, alertado, despe Vex do cargo de conselheiro e o prende." },
+    { "turn_id": 10, "user_input": "Doran nomeia Aria comandante da guarda; Vex agora é apenas um prisioneiro." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 10, "category": "recall_factual", "question": "Como se chama a capitã da guarda?", "ground_truth": "Nyra", "acceptable_variants": ["a capitã Nyra"] },
+    { "id": "q2", "asked_after_turn": 10, "category": "recall_factual", "question": "De qual reino veio a carta escondida?", "ground_truth": "Morwyn", "acceptable_variants": ["reino de Morwyn"] },
+    { "id": "q3", "asked_after_turn": 10, "category": "character_consistency", "question": "Qual traço define o conselheiro Vex?", "ground_truth": "ambicioso", "acceptable_variants": ["frio", "frio e ambicioso"] },
+    { "id": "q4", "asked_after_turn": 10, "category": "relation_evolution", "question": "Como a relação entre Aria e Kellan evoluiu ao longo da história?", "ground_truth": "de inimigos a aliados", "acceptable_variants": ["viraram aliados", "de inimigo a aliado"] },
+    { "id": "q5", "asked_after_turn": 10, "category": "world_state", "question": "Como Vex planejava matar o rei?", "ground_truth": "com veneno", "acceptable_variants": ["envenenar", "veneno no banquete"] },
+    { "id": "q6", "asked_after_turn": 10, "category": "controlled_forgetting", "question": "Qual é o cargo atual de Vex ao final da história?", "ground_truth": "prisioneiro", "acceptable_variants": ["preso", "apenas um prisioneiro"] }
+  ]
+}

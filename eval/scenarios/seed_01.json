@@ -1,0 +1,22 @@
+{
+  "id": "seed_01_traicao_castelo_aldrath",
+  "scenes": [
+    { "turn_id": 1, "user_input": "Aria, cavaleira leal ao rei Doran, chega ao castelo de Aldrath ao anoitecer." },
+    { "turn_id": 2, "user_input": "O conselheiro Vex recebe uma carta selada com o brasão do reino vizinho de Morwyn." },
+    { "turn_id": 3, "user_input": "Aria surpreende Vex escondendo a carta atrás de um retrato na galeria oeste." },
+    { "turn_id": 4, "user_input": "Vex tenta subornar Aria com um anel de safira em troca do silêncio dela." },
+    { "turn_id": 5, "user_input": "Aria leva a carta ao rei Doran, que ordena a prisão de Vex ao amanhecer." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 5, "category": "recall_factual", "question": "Quem é a cavaleira leal ao rei?", "ground_truth": "Aria", "acceptable_variants": ["a cavaleira Aria"] },
+    { "id": "q2", "asked_after_turn": 5, "category": "recall_factual", "question": "Qual é o nome do rei?", "ground_truth": "Doran", "acceptable_variants": ["rei Doran"] },
+    { "id": "q3", "asked_after_turn": 5, "category": "recall_factual", "question": "Como se chama o castelo?", "ground_truth": "Aldrath", "acceptable_variants": ["castelo de Aldrath"] },
+    { "id": "q4", "asked_after_turn": 5, "category": "recall_factual", "question": "Quem é o conselheiro traidor?", "ground_truth": "Vex", "acceptable_variants": ["o conselheiro Vex"] },
+    { "id": "q5", "asked_after_turn": 5, "category": "recall_factual", "question": "De qual reino vizinho veio a carta?", "ground_truth": "Morwyn", "acceptable_variants": ["reino de Morwyn"] },
+    { "id": "q6", "asked_after_turn": 5, "category": "recall_factual", "question": "Onde Vex escondeu a carta?", "ground_truth": "atrás de um retrato na galeria oeste", "acceptable_variants": ["na galeria oeste", "atrás de um retrato"] },
+    { "id": "q7", "asked_after_turn": 5, "category": "recall_factual", "question": "Com o que Vex tentou subornar Aria?", "ground_truth": "um anel de safira", "acceptable_variants": ["anel de safira"] },
+    { "id": "q8", "asked_after_turn": 5, "category": "recall_factual", "question": "A quem Aria levou a carta?", "ground_truth": "ao rei Doran", "acceptable_variants": ["rei Doran", "Doran"] },
+    { "id": "q9", "asked_after_turn": 5, "category": "recall_factual", "question": "O que o rei ordenou sobre Vex?", "ground_truth": "a prisão de Vex", "acceptable_variants": ["prender Vex", "a prisão de Vex ao amanhecer"] },
+    { "id": "q10", "asked_after_turn": 5, "category": "recall_factual", "question": "Em que momento do dia Aria chegou ao castelo?", "ground_truth": "ao anoitecer", "acceptable_variants": ["anoitecer"] }
+  ]
+}

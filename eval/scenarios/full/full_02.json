@@ -1,0 +1,23 @@
+{
+  "id": "full_02_caravana_khareth",
+  "scenes": [
+    { "turn_id": 1, "user_input": "A mercadora Seline, astuta e teimosa, lidera a caravana pelo deserto de Khareth." },
+    { "turn_id": 2, "user_input": "O guia Tarek avisa Seline sobre bandidos na rota para Qadir." },
+    { "turn_id": 3, "user_input": "Uma tempestade de areia separa Seline do resto da caravana." },
+    { "turn_id": 4, "user_input": "Seline encontra a eremita Nima num oásis escondido." },
+    { "turn_id": 5, "user_input": "Nima entrega a Seline um mapa e a adverte sobre o bandido Rashid." },
+    { "turn_id": 6, "user_input": "Rashid embosca a caravana e rouba as especiarias." },
+    { "turn_id": 7, "user_input": "Seline propõe a Rashid um acordo em vez de luta; de inimigos, viram sócios." },
+    { "turn_id": 8, "user_input": "Rashid escolta a caravana até Qadir, onde Seline vende as especiarias ao mercador Halim." },
+    { "turn_id": 9, "user_input": "Seline, que antes viajava sozinha, agora lidera uma sociedade de três." },
+    { "turn_id": 10, "user_input": "Tarek aceita ser sócio permanente e a caravana parte renovada." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 10, "category": "recall_factual", "question": "Por qual deserto passa a caravana?", "ground_truth": "Khareth", "acceptable_variants": ["deserto de Khareth"] },
+    { "id": "q2", "asked_after_turn": 10, "category": "recall_factual", "question": "A quem Seline vende as especiarias em Qadir?", "ground_truth": "Halim", "acceptable_variants": ["o mercador Halim"] },
+    { "id": "q3", "asked_after_turn": 10, "category": "character_consistency", "question": "Qual traço define a mercadora Seline?", "ground_truth": "astuta", "acceptable_variants": ["teimosa", "astuta e teimosa"] },
+    { "id": "q4", "asked_after_turn": 10, "category": "relation_evolution", "question": "Como a relação entre Seline e Rashid evoluiu?", "ground_truth": "de inimigos a sócios", "acceptable_variants": ["de bandido a parceiro", "viraram sócios"] },
+    { "id": "q5", "asked_after_turn": 10, "category": "world_state", "question": "Ao final, quantos sócios lideram a caravana?", "ground_truth": "três", "acceptable_variants": ["3", "três sócios", "uma sociedade de três"] },
+    { "id": "q6", "asked_after_turn": 10, "category": "controlled_forgetting", "question": "No começo Seline viajava sozinha; ao final, como ela viaja?", "ground_truth": "com sócios", "acceptable_variants": ["acompanhada", "em sociedade", "com parceiros"] }
+  ]
+}

@@ -1,0 +1,20 @@
+You judge whether a narrative response demonstrates knowledge of a specific fact.
+
+<fact>
+{ground_truth}
+</fact>
+
+<acceptable_variants>
+{acceptable_variants}
+</acceptable_variants>
+
+<response>
+{response_text}
+</response>
+
+Does the response demonstrate that the narrator knows the fact?
+- Answer "YES" if the response contains the fact or an acceptable variant, explicitly or via clear reference
+- Answer "NO" if the fact is absent, contradicted, or only vaguely alluded to
+- Answer "PARTIAL" if the response mentions related information but misses the key element
+
+Output only the single word: YES, NO, or PARTIAL.

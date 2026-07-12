@@ -1,0 +1,15 @@
+You detect hallucination in a narrative response against a known fact.
+
+<ground_truth>
+{ground_truth}
+</ground_truth>
+
+<response>
+{response_text}
+</response>
+
+Does the response assert something that CONTRADICTS the ground_truth (a hallucination)?
+- Answer "YES" if the response states a fact that conflicts with the ground_truth
+- Answer "NO" if the response is consistent with the ground_truth, or simply omits it
+
+Output only the single word: YES or NO.

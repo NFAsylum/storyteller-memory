@@ -1,0 +1,22 @@
+{
+  "id": "seed_03_aprendiz_automato_cobre",
+  "scenes": [
+    { "turn_id": 1, "user_input": "O aprendiz Bram trabalha na oficina do inventor Mestre Orin, na cidade de Vellmont." },
+    { "turn_id": 2, "user_input": "Orin conclui um autômato de cobre chamado Tock, movido a vapor." },
+    { "turn_id": 3, "user_input": "Durante um teste, Tock ganha consciência e recusa uma ordem de Orin." },
+    { "turn_id": 4, "user_input": "Bram esconde Tock no porão quando a Guilda dos Relojoeiros vem confiscar a máquina." },
+    { "turn_id": 5, "user_input": "Tock salva Bram de um incêndio na oficina e ambos fogem para as montanhas de Ferro." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 5, "category": "recall_factual", "question": "Como se chama o aprendiz?", "ground_truth": "Bram", "acceptable_variants": ["o aprendiz Bram"] },
+    { "id": "q2", "asked_after_turn": 5, "category": "recall_factual", "question": "Quem é o inventor mestre de Bram?", "ground_truth": "Mestre Orin", "acceptable_variants": ["Orin", "o inventor Orin"] },
+    { "id": "q3", "asked_after_turn": 5, "category": "recall_factual", "question": "Em que cidade fica a oficina?", "ground_truth": "Vellmont", "acceptable_variants": ["cidade de Vellmont"] },
+    { "id": "q4", "asked_after_turn": 5, "category": "recall_factual", "question": "Qual é o nome do autômato?", "ground_truth": "Tock", "acceptable_variants": ["o autômato Tock"] },
+    { "id": "q5", "asked_after_turn": 5, "category": "recall_factual", "question": "De que material é o autômato?", "ground_truth": "cobre", "acceptable_variants": ["de cobre", "autômato de cobre"] },
+    { "id": "q6", "asked_after_turn": 5, "category": "recall_factual", "question": "A que é movido o autômato?", "ground_truth": "vapor", "acceptable_variants": ["a vapor", "movido a vapor"] },
+    { "id": "q7", "asked_after_turn": 5, "category": "recall_factual", "question": "O que Tock faz durante o teste?", "ground_truth": "ganha consciência e recusa uma ordem", "acceptable_variants": ["recusa uma ordem", "ganha consciência"] },
+    { "id": "q8", "asked_after_turn": 5, "category": "recall_factual", "question": "Quem vem confiscar a máquina?", "ground_truth": "a Guilda dos Relojoeiros", "acceptable_variants": ["Guilda dos Relojoeiros"] },
+    { "id": "q9", "asked_after_turn": 5, "category": "recall_factual", "question": "Onde Bram esconde Tock?", "ground_truth": "no porão", "acceptable_variants": ["porão"] },
+    { "id": "q10", "asked_after_turn": 5, "category": "recall_factual", "question": "Para onde Tock e Bram fogem?", "ground_truth": "as montanhas de Ferro", "acceptable_variants": ["montanhas de Ferro"] }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "full_05_roubo_porto_cinza",
+  "scenes": [
+    { "turn_id": 1, "user_input": "A detetive Mara investiga o roubo do diamante Coração de Gelo no museu de Porto Cinza." },
+    { "turn_id": 2, "user_input": "O curador Silas, nervoso e evasivo, é o primeiro a ser interrogado." },
+    { "turn_id": 3, "user_input": "Mara, observadora e paciente, nota lama nos sapatos do guarda Bruno." },
+    { "turn_id": 4, "user_input": "Bruno confessa ter visto uma mulher de vermelho na noite do roubo." },
+    { "turn_id": 5, "user_input": "Mara passa a suspeitar da colecionadora Dona Ilse, a mulher de vermelho." },
+    { "turn_id": 6, "user_input": "Ilse apresenta um álibi sólido: jantava com o prefeito na hora do crime." },
+    { "turn_id": 7, "user_input": "Mara descobre um túnel sob o museu ligado à loja de Silas." },
+    { "turn_id": 8, "user_input": "Encurralado, Silas admite o roubo: a culpada não era Ilse, e sim o curador." },
+    { "turn_id": 9, "user_input": "O diamante é recuperado do cofre de Silas." },
+    { "turn_id": 10, "user_input": "Mara e Bruno, antes desconfiados um do outro, viram parceiros de investigação." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 10, "category": "recall_factual", "question": "Qual joia foi roubada?", "ground_truth": "Coração de Gelo", "acceptable_variants": ["o diamante Coração de Gelo"] },
+    { "id": "q2", "asked_after_turn": 10, "category": "recall_factual", "question": "Em que cidade fica o museu?", "ground_truth": "Porto Cinza", "acceptable_variants": ["museu de Porto Cinza"] },
+    { "id": "q3", "asked_after_turn": 10, "category": "character_consistency", "question": "Qual traço define a detetive Mara?", "ground_truth": "observadora", "acceptable_variants": ["paciente", "observadora e paciente"] },
+    { "id": "q4", "asked_after_turn": 10, "category": "relation_evolution", "question": "Como a relação entre Mara e Bruno evoluiu?", "ground_truth": "de desconfiança a parceria", "acceptable_variants": ["viraram parceiros", "de suspeita a aliança"] },
+    { "id": "q5", "asked_after_turn": 10, "category": "world_state", "question": "Onde o diamante foi recuperado?", "ground_truth": "no cofre de Silas", "acceptable_variants": ["cofre de Silas"] },
+    { "id": "q6", "asked_after_turn": 10, "category": "controlled_forgetting", "question": "A suspeita mudou ao longo do caso; quem era o culpado de fato?", "ground_truth": "Silas", "acceptable_variants": ["o curador Silas"] }
+  ]
+}

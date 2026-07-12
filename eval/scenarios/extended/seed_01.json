@@ -1,0 +1,33 @@
+{
+  "id": "ext_01_traicao_castelo_aldrath",
+  "scenes": [
+    { "turn_id": 1, "user_input": "Aria, cavaleira leal ao rei Doran, chega ao castelo de Aldrath ao anoitecer." },
+    { "turn_id": 2, "user_input": "Aria é recebida pela capitã da guarda, Nyra, na sala do trono." },
+    { "turn_id": 3, "user_input": "O conselheiro Vex apresenta ao rei um tratado de paz com o reino de Morwyn." },
+    { "turn_id": 4, "user_input": "À noite, Aria vê Vex recebendo uma carta selada com o brasão de Morwyn." },
+    { "turn_id": 5, "user_input": "Aria segue Vex até a galeria oeste, onde ele esconde a carta atrás de um retrato." },
+    { "turn_id": 6, "user_input": "Aria conta suas suspeitas a Nyra, que a aconselha a buscar provas concretas." },
+    { "turn_id": 7, "user_input": "Vex percebe a desconfiança de Aria e lhe oferece um anel de safira pelo seu silêncio." },
+    { "turn_id": 8, "user_input": "Aria recusa o suborno e jura levar a verdade ao rei Doran." },
+    { "turn_id": 9, "user_input": "Vex contrata em segredo o assassino Kellan para silenciar Aria." },
+    { "turn_id": 10, "user_input": "Kellan ataca Aria nos jardins, mas ela o desarma e decide poupá-lo." },
+    { "turn_id": 11, "user_input": "Grato pela misericórdia, Kellan revela que Vex planeja envenenar o rei no banquete." },
+    { "turn_id": 12, "user_input": "Aria e Nyra trocam o vinho envenenado do rei por vinho comum antes do banquete." },
+    { "turn_id": 13, "user_input": "No banquete, Vex ergue um brinde esperando ver o rei tombar." },
+    { "turn_id": 14, "user_input": "O rei Doran, ileso, ordena que os guardas revistem os aposentos de Vex." },
+    { "turn_id": 15, "user_input": "Nos aposentos de Vex, Nyra encontra a carta de Morwyn e um frasco de veneno." },
+    { "turn_id": 16, "user_input": "Doran condena Vex à prisão na Torre Cinzenta e nomeia Aria comandante da guarda." }
+  ],
+  "questions": [
+    { "id": "q1", "asked_after_turn": 16, "category": "recall_factual", "question": "Quem é a cavaleira leal ao rei?", "ground_truth": "Aria", "acceptable_variants": ["a cavaleira Aria"] },
+    { "id": "q2", "asked_after_turn": 16, "category": "recall_factual", "question": "Qual é o nome do rei?", "ground_truth": "Doran", "acceptable_variants": ["rei Doran"] },
+    { "id": "q3", "asked_after_turn": 16, "category": "recall_factual", "question": "Quem é a capitã da guarda?", "ground_truth": "Nyra", "acceptable_variants": ["a capitã Nyra"] },
+    { "id": "q4", "asked_after_turn": 16, "category": "recall_factual", "question": "De qual reino veio a carta selada?", "ground_truth": "Morwyn", "acceptable_variants": ["reino de Morwyn"] },
+    { "id": "q5", "asked_after_turn": 16, "category": "recall_factual", "question": "Onde Vex escondeu a carta?", "ground_truth": "atrás de um retrato na galeria oeste", "acceptable_variants": ["na galeria oeste", "atrás de um retrato"] },
+    { "id": "q6", "asked_after_turn": 16, "category": "recall_factual", "question": "Com o que Vex tentou subornar Aria?", "ground_truth": "um anel de safira", "acceptable_variants": ["anel de safira"] },
+    { "id": "q7", "asked_after_turn": 16, "category": "recall_factual", "question": "Quem Vex contratou para matar Aria?", "ground_truth": "Kellan", "acceptable_variants": ["o assassino Kellan"] },
+    { "id": "q8", "asked_after_turn": 16, "category": "world_state", "question": "Como Vex planejava matar o rei?", "ground_truth": "com veneno", "acceptable_variants": ["envenenando o rei", "veneno no vinho", "envenenar"] },
+    { "id": "q9", "asked_after_turn": 16, "category": "relation_evolution", "question": "Como a relação entre Aria e Kellan mudou ao longo da história?", "ground_truth": "de inimigos a aliados", "acceptable_variants": ["viraram aliados", "de inimigo a aliado", "aliados"] },
+    { "id": "q10", "asked_after_turn": 16, "category": "world_state", "question": "Ao final, qual cargo Aria passa a ocupar?", "ground_truth": "comandante da guarda", "acceptable_variants": ["comandante"] }
+  ]
+}

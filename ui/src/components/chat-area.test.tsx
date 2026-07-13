@@ -19,7 +19,10 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
   }),
 }));
-vi.mock("@/lib/api", () => ({ api: { runTurn: vi.fn().mockResolvedValue({}) } }));
+vi.mock("@/lib/api", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return { ...actual, api: { runTurn: vi.fn().mockResolvedValue({}) } };
+});
 
 describe("ChatArea", () => {
   it("renderiza os turnos existentes", () => {

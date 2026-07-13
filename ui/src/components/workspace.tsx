@@ -5,13 +5,19 @@ import { DebugPanel } from "./debug-panel";
 import { MemoryInspector } from "./memory-inspector";
 import { SessionsSidebar } from "./sessions-sidebar";
 
-export function Workspace({ activeId }: { activeId: string | null }) {
+export function Workspace({
+  activeId,
+  initialInput,
+}: {
+  activeId: string | null;
+  initialInput?: string;
+}) {
   return (
     <div className="flex h-screen w-full">
       <SessionsSidebar activeId={activeId} />
       {activeId ? (
         <>
-          <ChatArea sessionId={activeId} />
+          <ChatArea sessionId={activeId} initialInput={initialInput} />
           <aside className="w-96 shrink-0 border-l flex flex-col h-full">
             <div className="min-h-0 flex-1">
               <MemoryInspector sessionId={activeId} />

@@ -11,9 +11,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/hooks";
 
-export function ChatArea({ sessionId }: { sessionId: string }) {
+import { SessionConfigChip } from "./session-config-chip";
+
+export function ChatArea({
+  sessionId,
+  initialInput,
+}: {
+  sessionId: string;
+  initialInput?: string;
+}) {
   const { data: session, isLoading } = useSession(sessionId);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialInput ?? "");
   const [busy, setBusy] = useState(false);
 
   async function send() {
@@ -37,6 +45,10 @@ export function ChatArea({ sessionId }: { sessionId: string }) {
 
   return (
     <section className="flex-1 flex flex-col h-full min-w-0">
+      <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+        <span className="truncate text-sm font-medium">{session?.name ?? "…"}</span>
+        <SessionConfigChip sessionId={sessionId} />
+      </div>
       <ScrollArea className="flex-1 p-4">
         <div className="mx-auto max-w-2xl space-y-4">
           {isLoading && <Skeleton className="h-24 w-full" />}

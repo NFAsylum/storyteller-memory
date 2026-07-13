@@ -55,7 +55,7 @@ Passa pra "Vex" mas rejeita "o filho de Vex" (correto semanticamente). Recall ve
 
 ## 2. Controles de intent do usuário
 
-> **Status 2.1-2.4: backend feito (T2.1).** `SessionConfig` (genre/pov/tone/content_intensity/target_length) persistido em `session.config` (migration 0003), `POST /sessions` aceita config, `PATCH /sessions/{id}/config` edita, `StoryLoop` injeta as diretivas no prompt. **Falta:** UI (setup wizard + chip no header) e o tuning da prosa (ver `docs/pending-human-tuning.md`). O controle de `max_tokens` por extensão (2.2) fica pendente — precisa o `LlmClient` aceitar `max_tokens` (hoje só via diretiva de palavras no prompt).
+> **Status 2.1-2.6: backend + frontend feitos.** Backend (T2.1-T2.3): `SessionConfig` (genre/pov/tone/intensity/length + protagonist) em `session.config`, `POST /sessions` + `PATCH /config` + `GET /story-starters`, diretivas no prompt. Frontend (Fase 2 wizard): `SetupWizard` (4 passos: story&tone / voice / protagonist / starter grid), `SessionConfigChip` no header do chat (resumo + modal de edição → PATCH), starter preenche o 1º turno via `?starter=`. **Falta só:** verificação visual/screenshots (Marco) e o tuning da prosa (`docs/pending-human-tuning.md`). `max_tokens` por extensão (2.2) ainda pendente — precisa o `LlmClient` aceitar `max_tokens` (hoje só diretiva de palavras).
 
 ### 2.1 [C, P0, 5h] Sem picker de gênero
 Usuário só tem "brief" text. Não pode dizer "quero horror gótico" via UI. Tem que codificar em prosa.

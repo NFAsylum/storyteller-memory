@@ -10,6 +10,11 @@ Known locations: {known_locations}
 Recent relations: {recent_relations}
 </current_world_state>
 
+Write every extracted value — names, traits, location descriptions, relation kinds, and
+beat summaries — in the SAME language as <recent_turns> (e.g. if the turns are in
+Portuguese, the descriptions and summaries must be in Portuguese). Only the JSON keys stay
+in English.
+
 Extract:
 1. New characters introduced (name, salient traits, first_appeared_turn)
 2. Character traits updated (character_name, new_traits, evidence_turn)

@@ -1,18 +1,18 @@
 "use client";
 
-import { Menu, PanelRightOpen } from "lucide-react";
-import { useState } from "react";
+import { PanelLeft, PanelRight } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 import { ChatArea } from "./chat-area";
 import { DebugPanel } from "./debug-panel";
 import { MemoryInspector } from "./memory-inspector";
 import { SessionsSidebar } from "./sessions-sidebar";
 
-// Responsive shell (T6.1): full 3 columns on xl+, sidebar as a drawer below lg, and the
-// memory inspector as a drawer below xl. Chat is always the primary column.
+// Shell colapsável: sessões (esquerda) e memória (direita) podem ser fechadas em
+// QUALQUER tamanho de tela — a coluna central (história) ocupa o resto. Altura fixa
+// (h-screen + overflow-hidden); só a lista de turnos rola, os painéis ficam parados.
 export function Workspace({
   activeId,
   initialInput,
@@ -20,47 +20,43 @@ export function Workspace({
   activeId: string | null;
   initialInput?: string;
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [showInspector, setShowInspector] = useState(true);
+
+  // Começa colapsado em telas estreitas pra a coluna central não ser esmagada.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth < 1024) setShowSidebar(false);
+    if (window.innerWidth < 1280) setShowInspector(false);
+  }, []);
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      <div
-        className={cn(
-          "z-40 shrink-0 bg-background lg:static lg:z-auto lg:block",
-          sidebarOpen ? "fixed inset-y-0 left-0" : "hidden lg:block",
-        )}
-      >
-        <SessionsSidebar activeId={activeId} />
-      </div>
-      {sidebarOpen && (
-        <div
-          data-testid="sidebar-overlay"
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {showSidebar && <SessionsSidebar activeId={activeId} />}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-2 border-b p-2 xl:hidden">
+        <div className="flex shrink-0 items-center gap-1 border-b px-1.5 py-1">
           <Button
             variant="ghost"
             size="sm"
-            className="lg:hidden"
-            aria-label="abrir sessões"
-            onClick={() => setSidebarOpen(true)}
+            className="size-7 p-0"
+            aria-label={showSidebar ? "esconder sessões" : "mostrar sessões"}
+            aria-pressed={showSidebar}
+            onClick={() => setShowSidebar((v) => !v)}
           >
-            <Menu className="size-4" />
+            <PanelLeft className="size-4" />
           </Button>
           <span className="flex-1" />
           {activeId && (
             <Button
               variant="ghost"
               size="sm"
-              aria-label="abrir memória"
-              onClick={() => setInspectorOpen(true)}
+              className="size-7 p-0"
+              aria-label={showInspector ? "esconder memória" : "mostrar memória"}
+              aria-pressed={showInspector}
+              onClick={() => setShowInspector((v) => !v)}
             >
-              <PanelRightOpen className="size-4" />
+              <PanelRight className="size-4" />
             </Button>
           )}
         </div>
@@ -69,23 +65,13 @@ export function Workspace({
           {activeId ? (
             <>
               <ChatArea sessionId={activeId} initialInput={initialInput} />
-              <aside
-                className={cn(
-                  "z-40 flex h-full flex-col border-l bg-background xl:static xl:z-auto xl:flex xl:w-96",
-                  inspectorOpen ? "fixed inset-y-0 right-0 w-80" : "hidden xl:flex",
-                )}
-              >
-                <div className="min-h-0 flex-1">
-                  <MemoryInspector sessionId={activeId} />
-                </div>
-                <DebugPanel sessionId={activeId} />
-              </aside>
-              {inspectorOpen && (
-                <div
-                  data-testid="inspector-overlay"
-                  className="fixed inset-0 z-30 bg-black/40 xl:hidden"
-                  onClick={() => setInspectorOpen(false)}
-                />
+              {showInspector && (
+                <aside className="flex h-full w-96 shrink-0 flex-col border-l">
+                  <div className="min-h-0 flex-1">
+                    <MemoryInspector sessionId={activeId} />
+                  </div>
+                  <DebugPanel sessionId={activeId} />
+                </aside>
               )}
             </>
           ) : (

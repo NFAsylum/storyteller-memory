@@ -174,6 +174,7 @@ export function ChatArea({
   const { data: session, isLoading } = useSession(sessionId);
   const [text, setText] = useState(initialInput ?? "");
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -196,12 +197,16 @@ export function ChatArea({
   async function send() {
     const value = text.trim();
     if (!value || busy) return;
+    setText(""); // clear the box immediately; keeping it until the narration returned felt broken
+    setPending(value); // show the user's turn right away while the narration is generated
     setBusy(true);
     try {
       await api.runTurn(sessionId, value);
-      setText("");
       await refresh(sessionId);
+      setPending(null);
     } catch (err) {
+      setText(value); // restore so the turn isn't lost on failure
+      setPending(null);
       toast.error(`Erro no turno: ${(err as Error).message}`);
     } finally {
       setBusy(false);
@@ -226,7 +231,7 @@ export function ChatArea({
           <SessionConfigChip sessionId={sessionId} />
         </div>
       </div>
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 min-h-0 p-4">
         <div className="mx-auto max-w-2xl space-y-3">
           {isLoading && <Skeleton className="h-24 w-full" />}
           {session?.turns.map((t, i) => (
@@ -237,10 +242,17 @@ export function ChatArea({
               isLast={i === turnCount - 1}
             />
           ))}
-          {busy && (
-            <p className="text-sm text-muted-foreground animate-pulse">Continuando a história…</p>
+          {pending !== null && (
+            <div data-testid="pending-turn" className="space-y-1.5 rounded-lg p-2">
+              <p className="ml-auto max-w-[85%] rounded-lg bg-primary/10 px-3 py-2 text-sm">
+                {pending}
+              </p>
+              <p className="mr-auto max-w-[95%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground animate-pulse">
+                Gerando a narração…
+              </p>
+            </div>
           )}
-          {session && turnCount === 0 && !busy && (
+          {session && turnCount === 0 && pending === null && (
             <p className="text-sm text-muted-foreground">Escreva o primeiro turno abaixo.</p>
           )}
           <div ref={bottomRef} />

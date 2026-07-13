@@ -132,12 +132,20 @@ LLM-as-judge para métricas subjetivas.
 - Concordância humano/LLM tem que ser >80% em 5 exemplos manuais (testado no Sprint 3)
 
 ### `api/` (FastAPI)
-Rotas mínimas:
-- `POST /sessions` — cria nova sessão, retorna `session_id`
+Rotas:
+- `GET /sessions` / `POST /sessions` / `GET /sessions/{id}` / `DELETE /sessions/{id}`
 - `POST /sessions/{id}/turn` — envia input, retorna `TurnResult`
-- `GET /sessions/{id}/state` — dump completo (memory + world state) para inspector
+- `GET /sessions/{id}/turns/{n}/context` — `ContextBundle` usado naquele turno
 - `POST /sessions/{id}/reflect` — força reflection now
-- `DELETE /sessions/{id}` — clear session
+- `POST /sessions/{id}/compare-turn` — reexecuta o último turno `no_memory` vs `mem0_only`
+- `GET /sessions/{id}/state` — world_state + `raw_memory_count` + `next_reflection_at`
+- `GET /sessions/{id}/raw-memories` — memórias brutas do mem0 por turno (estado pré-reflection)
+
+**Operacional (T1.3):**
+- `GET /health` → `{status, backend_llm, mem0_ready, db_ready}` (sempre 200; `status="degraded"` se mem0/DB indisponível). Isento de rate limit — usado por healthcheck do Fly.
+- **CORS:** origens permitidas via env **`CORS_ORIGINS`** (CSV; default `http://localhost:3000`). Padronizado — não usar `ALLOWED_ORIGINS`.
+- **Rate limit:** in-memory por IP, janela deslizante de 60s, `RATE_LIMIT_PER_MINUTE` (default 60); o request (limite+1) recebe 429. Estado process-local (ok para instância única de dev).
+- **Reprodutibilidade (F1.5):** backends LLM rodam com `temperature=0`; o local também com `seed=42` (`LOCAL_LLM_SEED`).
 
 ### `ui/` (Streamlit)
 - Chat na área principal

@@ -16,14 +16,17 @@ Endpoints (Sprint 5):
 from __future__ import annotations
 
 import os
+import time
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 
 from api.deps import Backend, get_backend
 from core.memory.reflection import LlmReflection
@@ -56,10 +59,62 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Simple in-memory per-IP rate limit (no extra dependency). Sliding 60s window; the
+# (limit+1)th request in a window is rejected with 429. /health is exempt so external
+# health checks are never throttled. State is process-local — fine for single-instance dev.
+_RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "60"))
+_RATE_WINDOW_SECONDS = 60.0
+_rate_hits: dict[str, list[float]] = defaultdict(list)
+
+
+def reset_rate_limit() -> None:
+    """Clear the in-memory rate-limit window (used to isolate tests)."""
+    _rate_hits.clear()
+
+
+@app.middleware("http")
+async def rate_limit(request: Request, call_next: Any) -> Any:
+    if request.url.path == "/health":
+        return await call_next(request)
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    hits = _rate_hits[client_ip]
+    hits[:] = [t for t in hits if t > now - _RATE_WINDOW_SECONDS]
+    if len(hits) >= _RATE_LIMIT_PER_MINUTE:
+        return JSONResponse(
+            status_code=429, content={"detail": "rate limit exceeded — try again shortly"}
+        )
+    hits.append(now)
+    return await call_next(request)
+
+
+def _db_ready(backend: Backend) -> bool:
+    try:
+        with backend.session_factory() as db:
+            db.execute(text("SELECT 1"))
+        return True
+    except Exception:  # noqa: BLE001 - health must report, never raise
+        return False
+
+
+def _mem0_ready(backend: Backend) -> bool:
+    try:
+        return backend.memory_for("__health__") is not None
+    except Exception:  # noqa: BLE001
+        return False
+
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health(backend: Backend = Depends(get_backend)) -> dict[str, Any]:
+    """Structured readiness: LLM backend name + mem0/DB reachability (always 200)."""
+    db_ok = _db_ready(backend)
+    mem0_ok = _mem0_ready(backend)
+    return {
+        "status": "ok" if (db_ok and mem0_ok) else "degraded",
+        "backend_llm": os.environ.get("LLM_BACKEND", "fake"),
+        "mem0_ready": mem0_ok,
+        "db_ready": db_ok,
+    }
 
 
 def _now() -> str:

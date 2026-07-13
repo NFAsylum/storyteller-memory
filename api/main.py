@@ -12,20 +12,23 @@ Endpoints (Sprint 5):
   GET    /sessions/{id}/state                   world_state (+ raw_memory_count, next_reflection_at)
   GET    /sessions/{id}/raw-memories            raw mem0 memories (pre-reflection state), by turn
   PATCH  /sessions/{id}/config                  update narrative controls (genre/pov/tone/...)
+  POST   /sessions/{id}/turn-streamed           run a turn, streaming progress as SSE events
 """
 
 from __future__ import annotations
 
+import json
 import os
 import time
 import uuid
 from collections import defaultdict
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select, text
 
@@ -284,6 +287,93 @@ def run_turn(session_id: str, body: TurnInput, backend: Backend = Depends(get_ba
             "retrieved_context": result.retrieved_context,
             "cost_usd": result.cost_usd,
         }
+
+
+def _sse(event: str, data: Any) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+@app.post("/sessions/{session_id}/turn-streamed")
+def run_turn_streamed(
+    session_id: str, body: TurnInput, backend: Backend = Depends(get_backend)
+) -> StreamingResponse:
+    """Same turn as POST /turn, but streams stage progress as SSE (audit 4.1).
+
+    Events, in order: retrieval_start, retrieval_done, llm_start, llm_done,
+    reflection_check, turn_stored. An LLM failure emits `error` instead and stores
+    nothing (no partial turn). The non-streamed /turn stays the canonical path.
+    """
+
+    def events() -> Iterator[str]:
+        with backend.session_factory() as db:
+            session = db.get(Session, session_id)
+            if session is None:
+                yield _sse("error", {"message": f"session {session_id!r} not found"})
+                return
+            config = SessionConfig(**session.config) if session.config else SessionConfig()
+            memory = backend.memory_for(session_id)
+            world = WorldState(db)
+            turn_number = session.last_turn + 1
+            try:
+                yield _sse("retrieval_start", {"turn": turn_number})
+                bundle = RetrievalPolicy(memory, world).build_context(
+                    session_id, turn_number, body.text
+                )
+                yield _sse(
+                    "retrieval_done",
+                    {
+                        "active_characters": bundle.active_characters,
+                        "raw_memory_count": len(bundle.raw_memories),
+                    },
+                )
+                yield _sse("llm_start", {})
+                prompt = render_prompt(load_prompt_template(), bundle, body.text, config)
+                response = backend.llm.generate(
+                    system=prompt, messages=[{"role": "user", "content": body.text}]
+                )
+                narrator_text = response.content
+                yield _sse("llm_done", {"narrator_text": narrator_text, "cost_usd": response.cost_usd})
+            except Exception as exc:  # noqa: BLE001 - surface as SSE error, never crash the stream
+                yield _sse("error", {"message": str(exc)})
+                return
+
+            # Persist only after a successful generation (no partial turns on error).
+            memory.add(
+                f"Turn {turn_number}\nPlayer: {body.text}\nNarrator: {narrator_text}",
+                metadata={"turn": turn_number, "type": "story_turn"},
+            )
+            yield _sse("reflection_check", {"next_reflection_at": _next_reflection_at(turn_number)})
+            if turn_number % DEFAULT_REFLECT_EVERY == 0:
+                try:
+                    LlmReflection(backend.llm, world, memory).consolidate(
+                        session_id, since_turn=turn_number - DEFAULT_REFLECT_EVERY
+                    )
+                except Exception:  # noqa: BLE001 - a reflection failure must not lose the turn
+                    pass
+            retrieved_context = {**bundle.model_dump(), "turn": turn_number}
+            db.add(
+                Turn(
+                    session_id=session_id,
+                    turn_number=turn_number,
+                    user_input=body.text,
+                    narrator_text=narrator_text,
+                    retrieved_context=retrieved_context,
+                    created_at=_now(),
+                )
+            )
+            session.last_turn = turn_number
+            db.commit()
+            yield _sse(
+                "turn_stored",
+                {
+                    "turn_number": turn_number,
+                    "narrator_text": narrator_text,
+                    "retrieved_context": retrieved_context,
+                    "cost_usd": response.cost_usd,
+                },
+            )
+
+    return StreamingResponse(events(), media_type="text/event-stream")
 
 
 @app.get("/sessions/{session_id}/turns/{turn_number}/context")

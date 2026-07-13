@@ -221,6 +221,7 @@ Se resposta demora >60s, usuário fica olhando spinner. Sem cancel/timeout claro
 ## 9. Responsividade e tema (adicionado pós-feedback)
 
 ### 9.1 [C, P0, 5h] Layout não responsivo
+> **Status: layout feito (T6.1); testes de viewport = flag de browser.** `Workspace` responsivo: 3 colunas plenas em `xl+`; **sidebar vira drawer com overlay abaixo de `lg`**; **inspector vira drawer abaixo de `xl`**; top bar mobile com botões de menu/memória; chat sempre a coluna primária; `overflow-hidden` evita scroll horizontal. **Pendente (precisa browser):** Playwright viewport tests em 5 tamanhos + screenshots em `docs/screenshots/responsive/` — Marco roda (sem browser aqui; não instalo Playwright sem OK). Desvio: usei **drawers** em vez de tabs no mobile (padrão mais limpo, mesmo objetivo).
 Você reportou 100% height / 40% width tela full HD renderiza mal. Layout de 3 colunas assume desktop full width.
 **Fix:**
 - Breakpoints em Tailwind: `md` (768px) mostra 2 colunas (sidebar + chat, inspector vira drawer), `lg` (1024px) mostra 3 colunas

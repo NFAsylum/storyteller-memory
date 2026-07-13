@@ -136,6 +136,8 @@ Relações listadas como texto ("Aria-Vex, antagonista, valence -2"). Deveria se
 **Fix:** react-flow ou similar, nodes = characters, edges = relations com espessura por valence. Filtra por personagem selecionado.
 
 ### 5.3 [C, P0, 5h] Sem edição/deleção de fatos falsos
+> **Status: backend feito (T3.3).** `PATCH`/`DELETE /sessions/{id}/state/{characters|locations|relations|story-beats}/{id}` (com 404 cross-session). `/state` agora expõe `id` de todos os 4 tipos. Deletar remove o fato do contexto do próximo turno (retrieval lê o world_state — testado). Falta: botões edit/delete nos cards (frontend) e o soft-flag `user_corrected` no mem0 (as memórias brutas são um canal separado; a exclusão do fato estruturado já cobre o "próximo turno não menciona").
+
 Reflection do 7B alucina. Usuário não pode corrigir. Fato falso persiste na memória.
 **Fix:** cada character/location/relation/beat tem botão "edit" (change fields) e "delete" (remove from world state). Botão "flag as incorrect" opcional pra dataset de melhoria futura.
 

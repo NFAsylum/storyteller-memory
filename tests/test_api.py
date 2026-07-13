@@ -463,7 +463,7 @@ def test_turn_streamed_errors_without_storing(tmp_path: Path) -> None:
     factory = sessionmaker(engine, expire_on_commit=False)
 
     class _FailingLlm:
-        def generate(self, system, messages, tools=None):
+        def generate(self, system, messages, tools=None, max_tokens=None):
             raise RuntimeError("llm down")
 
     backend = Backend(session_factory=factory, llm=_FailingLlm(), memory_for=_MemoryProvider())

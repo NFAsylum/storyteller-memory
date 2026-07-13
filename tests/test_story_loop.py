@@ -56,7 +56,7 @@ def test_run_turn_injects_user_input_into_prompt() -> None:
     captured: dict[str, object] = {}
 
     class _CapturingLlm(FakeLlmClient):
-        def generate(self, system, messages, tools=None):
+        def generate(self, system, messages, tools=None, max_tokens=None):
             captured["system"] = system
             return super().generate(system, messages, tools)
 
@@ -69,3 +69,19 @@ def test_run_turn_injects_user_input_into_prompt() -> None:
 def test_stored_memory_ids_empty_when_backend_returns_no_id() -> None:
     loop = StoryLoop(SESSION, memory=_memory(memory_id=""), llm=FakeLlmClient())
     assert loop.run_turn("um turno").stored_memory_ids == []
+
+
+def test_run_turn_passes_max_tokens_from_config() -> None:
+    from core.session_config import SessionConfig, max_tokens_for
+
+    captured: dict[str, object] = {}
+
+    class _Cap(FakeLlmClient):
+        def generate(self, system, messages, tools=None, max_tokens=None):
+            captured["max_tokens"] = max_tokens
+            return super().generate(system, messages, tools)
+
+    config = SessionConfig(target_length="long")
+    StoryLoop(SESSION, memory=_memory(), llm=_Cap(), config=config).run_turn("um turno")
+    assert captured["max_tokens"] == max_tokens_for(config)
+    assert captured["max_tokens"] > max_tokens_for(SessionConfig(target_length="brief"))

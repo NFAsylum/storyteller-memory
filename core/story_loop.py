@@ -16,7 +16,7 @@ from core.llm_client import LlmClient
 from core.memory.mem0_adapter import Mem0Adapter
 from core.memory.reflection import Reflection
 from core.memory.retrieval_policy import ContextBundle, RetrievalPolicy
-from core.session_config import SessionConfig, prompt_directives
+from core.session_config import SessionConfig, max_tokens_for, prompt_directives
 
 _PROMPT_PATH = Path(__file__).parent / "prompts" / "story_continuation.txt"
 _EMPTY_SLOT = "(none yet)"
@@ -107,6 +107,7 @@ class StoryLoop:
         response = self.llm.generate(
             system=prompt,
             messages=[{"role": "user", "content": user_input}],
+            max_tokens=max_tokens_for(self.config),
         )
         narrator_text = response.content
 

@@ -53,7 +53,7 @@ class _CapturingLlm(FakeLlmClient):
         super().__init__()
         self.prompts: list[str] = []
 
-    def generate(self, system, messages, tools=None):
+    def generate(self, system, messages, tools=None, max_tokens=None):
         self.prompts.append(system)
         return super().generate(system, messages, tools)
 

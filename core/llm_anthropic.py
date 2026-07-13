@@ -80,10 +80,11 @@ class AnthropicLlmClient:
         system: str,
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
+        max_tokens: int | None = None,
     ) -> LlmResponse:
         kwargs: dict[str, Any] = {
             "model": self.model,
-            "max_tokens": self.max_tokens,
+            "max_tokens": max_tokens or self.max_tokens,
             "messages": messages,
             "temperature": 0,  # deterministic decoding (F1.5); accepted on claude-sonnet-4-6
         }

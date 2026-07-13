@@ -55,7 +55,7 @@ Passa pra "Vex" mas rejeita "o filho de Vex" (correto semanticamente). Recall ve
 
 ## 2. Controles de intent do usuário
 
-> **Status 2.1-2.6: backend + frontend feitos.** Backend (T2.1-T2.3): `SessionConfig` (genre/pov/tone/intensity/length + protagonist) em `session.config`, `POST /sessions` + `PATCH /config` + `GET /story-starters`, diretivas no prompt. Frontend (Fase 2 wizard): `SetupWizard` (4 passos: story&tone / voice / protagonist / starter grid), `SessionConfigChip` no header do chat (resumo + modal de edição → PATCH), starter preenche o 1º turno via `?starter=`. **Falta só:** verificação visual/screenshots (Marco) e o tuning da prosa (`docs/pending-human-tuning.md`). `max_tokens` por extensão (2.2) ainda pendente — precisa o `LlmClient` aceitar `max_tokens` (hoje só diretiva de palavras).
+> **Status 2.1-2.6: backend + frontend feitos.** Backend (T2.1-T2.3): `SessionConfig` (genre/pov/tone/intensity/length + protagonist) em `session.config`, `POST /sessions` + `PATCH /config` + `GET /story-starters`, diretivas no prompt. Frontend (Fase 2 wizard): `SetupWizard` (4 passos: story&tone / voice / protagonist / starter grid), `SessionConfigChip` no header do chat (resumo + modal de edição → PATCH), starter preenche o 1º turno via `?starter=`. **Falta só:** verificação visual/screenshots (Marco) e o tuning da prosa (`docs/pending-human-tuning.md`). **`max_tokens` por extensão (2.2): feito.** `LlmClient.generate` aceita `max_tokens` (todas as impls); `StoryLoop` + os endpoints de geração passam `max_tokens_for(config)` (brief 300 / medium 700 / long 1200) — além da diretiva de palavras no prompt.
 
 ### 2.1 [C, P0, 5h] Sem picker de gênero
 Usuário só tem "brief" text. Não pode dizer "quero horror gótico" via UI. Tem que codificar em prosa.

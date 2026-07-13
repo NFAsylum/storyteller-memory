@@ -6,6 +6,7 @@ Tone: {tone}
 Point of view: {pov}
 Length: {target_length}
 Content: {content_intensity}
+Narrator stance: {protagonist}
 </style>
 
 <world_state>

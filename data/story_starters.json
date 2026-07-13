@@ -1,0 +1,44 @@
+{
+  "fantasy": [
+    "You awaken in a stone chamber, torchlight guttering in a draft you can't place.",
+    "The dragon's shadow slides over the wheat field, and every farmhand drops flat but you.",
+    "The queen's summons arrived sewn into the lining of your coat. You only found it now.",
+    "At the crossroads shrine the offered coins are gone, and something left three wet footprints."
+  ],
+  "scifi": [
+    "The nav computer beeps: jump complete. The star outside is the wrong colour.",
+    "You crack the airlock and the derelict's corridor is warm, though its reactor died a century ago.",
+    "Your new prosthetic arm just typed a message you didn't write.",
+    "The colony's water ration halved overnight, and the council insists nothing changed."
+  ],
+  "horror": [
+    "The neighbours' dog has barked at your basement door for two hours. You don't own a dog.",
+    "Every photograph in the house now shows one more person standing at the back.",
+    "The tenant upstairs died Tuesday. You still hear their kettle click off each morning.",
+    "You find your own name in the guest book of a hotel you've never visited, dated next week."
+  ],
+  "mystery": [
+    "The victim locked the door from the inside, and the only key is in your pocket.",
+    "Every clock in the manor stopped at 3:14 — except the study's, running ten minutes fast.",
+    "The witness describes the thief perfectly. The thief is you, and you were asleep.",
+    "The dead man's last ledger entry is a single word, in your handwriting."
+  ],
+  "romance": [
+    "They returned your umbrella a week later, dry, with a note you can't stop rereading.",
+    "You've shared this platform every morning for a year, and today they spoke first.",
+    "The wedding you're catering is your ex's — and so, apparently, is the best man's toast.",
+    "The bookshop clerk keeps slipping the wrong receipts into your bag, with phone numbers on them."
+  ],
+  "literary": [
+    "Your father's house sold today. You kept only the key, which fits nothing you own.",
+    "The letter is thirty years late, addressed to a version of you that no longer exists.",
+    "You return to the coast town every summer to not talk about the same thing.",
+    "At the reunion, everyone remembers a you that you're fairly sure never happened."
+  ],
+  "comedy": [
+    "You accepted the job before realising 'Assistant to the Wizard' involved actual wizards, and paperwork.",
+    "The self-checkout has flagged your single banana as a 'suspicious item' for the fourth time.",
+    "Your roommate replaced all the furniture with slightly smaller furniture. No one else notices.",
+    "You've been promoted to 'Head of the Committee to Reduce Committees.'"
+  ]
+}

@@ -66,6 +66,7 @@ def render_prompt(
         pov=directives["pov"],
         target_length=directives["target_length"],
         content_intensity=directives["content_intensity"],
+        protagonist=directives["protagonist"],
     )
 
 

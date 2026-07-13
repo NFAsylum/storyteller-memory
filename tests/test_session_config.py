@@ -15,7 +15,14 @@ def test_defaults() -> None:
 
 def test_prompt_directives_has_all_keys_nonempty() -> None:
     directives = prompt_directives(SessionConfig())
-    assert set(directives) == {"genre", "tone", "pov", "target_length", "content_intensity"}
+    assert set(directives) == {
+        "genre",
+        "tone",
+        "pov",
+        "target_length",
+        "content_intensity",
+        "protagonist",
+    }
     assert all(isinstance(v, str) and v for v in directives.values())
 
 
@@ -38,6 +45,20 @@ def test_render_prompt_fills_every_placeholder() -> None:
     assert "{" not in prompt and "}" not in prompt  # no unfilled placeholders
     assert "first person" in prompt  # POV directive reached the prompt
     assert "Aria entra." in prompt
+
+
+def test_protagonist_directive_uses_name_when_playing() -> None:
+    directive = prompt_directives(
+        SessionConfig(
+            protagonist={"role": "protagonist", "character_name": "Aria", "character_role": "knight"}
+        )
+    )["protagonist"]
+    assert "Aria" in directive
+    assert "knight" in directive
+
+
+def test_protagonist_directive_defaults_to_author() -> None:
+    assert "author" in prompt_directives(SessionConfig())["protagonist"].lower()
 
 
 def test_render_prompt_reflects_genre_choice() -> None:

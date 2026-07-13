@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSessions } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 
-import { NewSessionDialog } from "./new-session-dialog";
+import { SetupWizard } from "./setup-wizard";
 
 export function SessionsSidebar({ activeId }: { activeId: string | null }) {
   const { data: sessions, isLoading } = useSessions();
@@ -15,7 +15,7 @@ export function SessionsSidebar({ activeId }: { activeId: string | null }) {
     <aside className="w-72 shrink-0 border-r flex flex-col h-full">
       <div className="p-3 border-b flex items-center justify-between">
         <h2 className="font-semibold text-sm">Sessões</h2>
-        <NewSessionDialog />
+        <SetupWizard />
       </div>
       <ScrollArea className="flex-1">
         <nav className="p-2 space-y-1">

@@ -2,6 +2,44 @@
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export type Genre =
+  | "fantasy"
+  | "scifi"
+  | "horror"
+  | "mystery"
+  | "romance"
+  | "literary"
+  | "comedy";
+export type Pov = "first_person" | "third_limited" | "third_omniscient";
+export type Tone = "serious" | "comedic" | "gothic" | "cyberpunk" | "cozy" | "dark";
+export type ContentIntensity = "sfw" | "mature" | "dark";
+export type TargetLength = "brief" | "medium" | "long";
+export type ProtagonistRole = "protagonist" | "author" | "narrator";
+
+export interface Protagonist {
+  role: ProtagonistRole;
+  character_name: string;
+  character_role: string;
+}
+
+export interface SessionConfig {
+  genre: Genre;
+  pov: Pov;
+  tone: Tone;
+  content_intensity: ContentIntensity;
+  target_length: TargetLength;
+  protagonist: Protagonist;
+}
+
+export const DEFAULT_CONFIG: SessionConfig = {
+  genre: "fantasy",
+  pov: "third_limited",
+  tone: "serious",
+  content_intensity: "sfw",
+  target_length: "medium",
+  protagonist: { role: "author", character_name: "", character_role: "" },
+};
+
 export interface SessionSummary {
   id: string;
   name: string;
@@ -57,6 +95,7 @@ export interface SessionDetail {
   name: string;
   brief: string;
   last_turn: number;
+  config: SessionConfig;
   turns: Turn[];
   memory_state: MemoryState;
 }
@@ -105,12 +144,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   listSessions: () => request<SessionSummary[]>("/sessions"),
-  createSession: (name: string, brief = "") =>
-    request<{ id: string; name: string; last_turn: number }>("/sessions", {
+  createSession: (name: string, brief = "", config?: SessionConfig) =>
+    request<{ id: string; name: string; last_turn: number; config: SessionConfig }>("/sessions", {
       method: "POST",
-      body: JSON.stringify({ name, brief }),
+      body: JSON.stringify({ name, brief, ...(config ? { config } : {}) }),
     }),
   getSession: (id: string) => request<SessionDetail>(`/sessions/${id}`),
+  patchConfig: (id: string, config: SessionConfig) =>
+    request<{ id: string; config: SessionConfig }>(`/sessions/${id}/config`, {
+      method: "PATCH",
+      body: JSON.stringify(config),
+    }),
+  storyStarters: (genre: Genre) =>
+    request<{ genre: string; starters: string[] }>(`/story-starters?genre=${genre}`),
   deleteSession: (id: string) => request<void>(`/sessions/${id}`, { method: "DELETE" }),
   runTurn: (id: string, text: string) =>
     request<TurnResult>(`/sessions/${id}/turn`, {

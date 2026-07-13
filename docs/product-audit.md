@@ -55,6 +55,8 @@ Passa pra "Vex" mas rejeita "o filho de Vex" (correto semanticamente). Recall ve
 
 ## 2. Controles de intent do usuário
 
+> **Status 2.1-2.4: backend feito (T2.1).** `SessionConfig` (genre/pov/tone/content_intensity/target_length) persistido em `session.config` (migration 0003), `POST /sessions` aceita config, `PATCH /sessions/{id}/config` edita, `StoryLoop` injeta as diretivas no prompt. **Falta:** UI (setup wizard + chip no header) e o tuning da prosa (ver `docs/pending-human-tuning.md`). O controle de `max_tokens` por extensão (2.2) fica pendente — precisa o `LlmClient` aceitar `max_tokens` (hoje só via diretiva de palavras no prompt).
+
 ### 2.1 [C, P0, 5h] Sem picker de gênero
 Usuário só tem "brief" text. Não pode dizer "quero horror gótico" via UI. Tem que codificar em prosa.
 **Fix:** dropdown/pills no topo da sessão: fantasy / sci-fi / horror / mystery / romance / literary / comedy. Cada gênero mapeia pra modificadores no prompt de continuation.

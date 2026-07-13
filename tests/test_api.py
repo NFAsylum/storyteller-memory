@@ -78,6 +78,36 @@ def test_create_and_list_sessions(client) -> None:
     assert any(s["id"] == sid and s["name"] == "Minha história" for s in listing)
 
 
+def test_create_with_config_persists(client) -> None:
+    tc, _ = client
+    resp = tc.post("/sessions", json={"name": "H", "config": {"genre": "scifi", "pov": "first_person"}})
+    assert resp.status_code == 201
+    assert resp.json()["config"]["genre"] == "scifi"
+    sid = resp.json()["id"]
+    got = tc.get(f"/sessions/{sid}").json()
+    assert got["config"]["genre"] == "scifi"
+    assert got["config"]["pov"] == "first_person"
+
+
+def test_create_defaults_config_when_omitted(client) -> None:
+    tc, _ = client
+    sid = _create(tc)
+    cfg = tc.get(f"/sessions/{sid}").json()["config"]
+    assert cfg["genre"] == "fantasy"  # default
+    assert cfg["target_length"] == "medium"
+
+
+def test_patch_config_updates(client) -> None:
+    tc, _ = client
+    sid = _create(tc)
+    resp = tc.patch(f"/sessions/{sid}/config", json={"genre": "horror", "tone": "gothic"})
+    assert resp.status_code == 200
+    assert resp.json()["config"]["genre"] == "horror"
+    got = tc.get(f"/sessions/{sid}").json()["config"]
+    assert got["genre"] == "horror"
+    assert got["tone"] == "gothic"
+
+
 def test_run_turns_increment_and_persist(client) -> None:
     tc, _ = client
     sid = _create(tc)

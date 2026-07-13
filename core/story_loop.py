@@ -16,6 +16,7 @@ from core.llm_client import LlmClient
 from core.memory.mem0_adapter import Mem0Adapter
 from core.memory.reflection import Reflection
 from core.memory.retrieval_policy import ContextBundle, RetrievalPolicy
+from core.session_config import SessionConfig, prompt_directives
 
 _PROMPT_PATH = Path(__file__).parent / "prompts" / "story_continuation.txt"
 _EMPTY_SLOT = "(none yet)"
@@ -40,8 +41,14 @@ def _slot(items: list[str], sep: str) -> str:
     return sep.join(i for i in items if i) or _EMPTY_SLOT
 
 
-def render_prompt(template: str, bundle: ContextBundle | None, user_input: str) -> str:
-    """Fill the story-continuation template from a context bundle (or empty slots)."""
+def render_prompt(
+    template: str,
+    bundle: ContextBundle | None,
+    user_input: str,
+    config: SessionConfig | None = None,
+) -> str:
+    """Fill the story-continuation template from a context bundle + narrative config."""
+    directives = prompt_directives(config or SessionConfig())
     if bundle is None:
         active_characters = story_beats = raw_memories = _EMPTY_SLOT
     else:
@@ -54,6 +61,11 @@ def render_prompt(template: str, bundle: ContextBundle | None, user_input: str) 
         story_beats=story_beats,
         raw_memories=raw_memories,
         user_input=user_input,
+        genre=directives["genre"],
+        tone=directives["tone"],
+        pov=directives["pov"],
+        target_length=directives["target_length"],
+        content_intensity=directives["content_intensity"],
     )
 
 
@@ -71,6 +83,7 @@ class StoryLoop:
         reflect_every: int = DEFAULT_REFLECT_EVERY,
         prompt_template: str | None = None,
         start_turn: int = 0,
+        config: SessionConfig | None = None,
     ) -> None:
         self.session_id = session_id
         self.memory = memory
@@ -80,6 +93,7 @@ class StoryLoop:
         self.reflect_every = reflect_every
         self._prompt_template = prompt_template or load_prompt_template()
         self._turn = start_turn  # resume numbering for a persisted session
+        self.config = config or SessionConfig()
 
     def run_turn(self, user_input: str) -> TurnResult:
         self._turn += 1
@@ -113,7 +127,7 @@ class StoryLoop:
         )
 
     def _render_prompt(self, user_input: str, bundle: ContextBundle | None) -> str:
-        return render_prompt(self._prompt_template, bundle, user_input)
+        return render_prompt(self._prompt_template, bundle, user_input, self.config)
 
     def _maybe_reflect(self) -> None:
         if self.reflection and self._turn % self.reflect_every == 0:

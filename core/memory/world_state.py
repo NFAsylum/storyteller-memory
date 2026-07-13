@@ -73,6 +73,8 @@ class Session(Base):
     brief: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[str] = mapped_column(String(32))  # ISO-8601 string (portable)
     last_turn: Mapped[int] = mapped_column(Integer, default=0)
+    # Narrative controls (genre/pov/tone/intensity/length) — see core.session_config.
+    config: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
 class Turn(Base):

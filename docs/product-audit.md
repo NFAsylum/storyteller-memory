@@ -90,6 +90,7 @@ Usuário abre nova sessão, tela em branco. Não sabe o que digitar.
 ## 3. Onboarding / primeiro uso
 
 ### 3.1 [C, P0, 4h] Home sem CTA claro
+> **Status: feito (T7.1).** Hero na 1ª visita (flag `localStorage`): título + pitch da memória verificável + CTA "Nova história" (wizard) + "Como funciona" (modal explicando mem0→reflection→retrieval) + callout do "Comparar com/sem memória". 2ª visita vai direto pro workspace. ("Start example story" pré-populado fica de follow-up — precisa seed no backend.)
 Lista de sessões vazia, botão "Nova sessão". Sem hero, sem exemplo, sem "try demo".
 **Fix:** landing dentro do app: "Sua história continua exatamente de onde parou. [Botão: Try example story]". Loading uma sessão pré-populada com o example do README.
 
@@ -222,6 +223,7 @@ Você reportou 100% height / 40% width tela full HD renderiza mal. Layout de 3 c
 - Test em widths: 400px (mobile portrait), 768px (tablet), 1024px, 1440px, 1920px, ultrawide
 
 ### 9.2 [C, P0, 3h] Sem theme toggle
+> **Status: feito (T6.2).** Toggle sol/lua no header da sidebar; classe `.dark` no `<html>`; detecta `prefers-color-scheme` na 1ª visita e persiste em `localStorage`; script anti-FOUC no layout (sem flash). shadcn já traz as CSS vars de light/dark.
 Reportado. Só um tema (provavelmente Slate default do shadcn) e fixo.
 **Fix:**
 - Toggle dark/light no header

@@ -168,7 +168,7 @@ export function MemoryInspector({ sessionId }: { sessionId: string }) {
         <TabsTrigger value="rels">Relações ({relations.length})</TabsTrigger>
         <TabsTrigger value="beats">Beats ({beats.length})</TabsTrigger>
       </TabsList>
-      <ScrollArea className="flex-1 px-2 pb-2">
+      <ScrollArea className="flex-1 min-h-0 px-2 pb-2">
         <TabsContent value="chars" className="space-y-2">
           {characters.map((c) => (
             <Card key={c.id} className="p-3" data-testid="character-card">

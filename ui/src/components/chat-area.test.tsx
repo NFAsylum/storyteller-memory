@@ -57,6 +57,32 @@ describe("ChatArea", () => {
     await waitFor(() => expect(api.runTurn).toHaveBeenCalledWith("a", "Aria avança"));
   });
 
+  it("limpa a caixa na hora e mostra o turno pendente enquanto gera", async () => {
+    let resolveTurn: () => void = () => {};
+    vi.mocked(api.runTurn).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveTurn = () => resolve({} as never);
+      }),
+    );
+    render(<ChatArea sessionId="a" />);
+    const box = screen.getByLabelText("entrada do turno");
+    await userEvent.type(box, "Aria avança");
+    await userEvent.click(screen.getByRole("button", { name: "Próximo turno" }));
+
+    expect(box).toHaveValue(""); // caixa limpa imediatamente (não espera a narração)
+    expect(screen.getByTestId("pending-turn")).toHaveTextContent("Aria avança");
+    resolveTurn();
+  });
+
+  it("restaura o texto na caixa se o turno falha", async () => {
+    vi.mocked(api.runTurn).mockRejectedValueOnce(new Error("boom"));
+    render(<ChatArea sessionId="a" />);
+    const box = screen.getByLabelText("entrada do turno");
+    await userEvent.type(box, "Aria tropeça");
+    await userEvent.click(screen.getByRole("button", { name: "Próximo turno" }));
+    await waitFor(() => expect(box).toHaveValue("Aria tropeça"));
+  });
+
   it("mostra toast de erro quando o turno falha (sem crash)", async () => {
     vi.mocked(api.runTurn).mockRejectedValueOnce(new Error("timeout"));
     render(<ChatArea sessionId="a" />);

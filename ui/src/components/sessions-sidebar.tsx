@@ -21,7 +21,7 @@ export function SessionsSidebar({ activeId }: { activeId: string | null }) {
           <SetupWizard />
         </div>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <nav className="p-2 space-y-1">
           {isLoading && <p className="p-2 text-xs text-muted-foreground">Carregando…</p>}
           {sessions?.length === 0 && (

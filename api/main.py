@@ -29,7 +29,8 @@ import os
 import time
 import uuid
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
 
@@ -60,7 +61,21 @@ from core.story_loop import (
 )
 from core.story_starters import starters_for
 
-app = FastAPI(title="Storyteller API")
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Build the backend on the MAIN thread at startup (T-INFRA.1).
+
+    Lazy `Depends(get_backend)` would construct mem0 on FastAPI's worker thread, where
+    sentence-transformers / torch hit 'Cannot copy out of meta tensor'. Warming here (main
+    thread) also moves the ~72s mem0 import off the first request and into startup.
+    """
+    import api.deps as deps
+
+    deps._backend = deps.build_backend()
+    yield
+
+
+app = FastAPI(title="Storyteller API", lifespan=lifespan)
 
 # Dev default localhost:3000; override in prod via CORS_ORIGINS (comma-separated).
 _cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")

@@ -128,6 +128,8 @@ Se rodar com Anthropic, usuário paga por token. Sem cost tracker visível.
 ## 5. Memory Inspector — profundidade insuficiente
 
 ### 5.1 [H, P1, 4h] Cards de personagens minimalistas
+> **Status: feito (T3.1).** Memory Inspector v2: avatar (inicial + cor por hash), traços como badges, `turnos X–Y`, resumo de relações por personagem ("2 enemy · 1 ally"), + botões **editar/apagar** em todos os 4 tipos (consomem o PATCH/DELETE do #11). Falta só: chips de turno clicáveis que rolam o chat (defer — precisa coordenação cross-componente) e verificação visual.
+
 Provavelmente só mostra nome + traits em bullet. Sem foto/avatar/histórico.
 **Fix:** cada personagem tem: nome + auto-avatar (initial + color hash), lista de traits com badges, "first appeared: turn X", "last seen: turn Y", turnos onde aparece (chips clicáveis que scrollam a chat pra aquele turno), relações resumidas.
 

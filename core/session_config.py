@@ -13,13 +13,22 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 Genre = Literal["fantasy", "scifi", "horror", "mystery", "romance", "literary", "comedy"]
 Pov = Literal["first_person", "third_limited", "third_omniscient"]
 Tone = Literal["serious", "comedic", "gothic", "cyberpunk", "cozy", "dark"]
 ContentIntensity = Literal["sfw", "mature", "dark"]
 TargetLength = Literal["brief", "medium", "long"]
+ProtagonistRole = Literal["protagonist", "author", "narrator"]
+
+
+class Protagonist(BaseModel):
+    """Who the user is in the story (audit 2.5)."""
+
+    role: ProtagonistRole = "author"
+    character_name: str = ""
+    character_role: str = ""  # e.g. warrior, detective, artist
 
 
 class SessionConfig(BaseModel):
@@ -30,6 +39,7 @@ class SessionConfig(BaseModel):
     tone: Tone = "serious"
     content_intensity: ContentIntensity = "sfw"
     target_length: TargetLength = "medium"
+    protagonist: Protagonist = Field(default_factory=Protagonist)
 
 
 # --- DRAFT directive strings (tune wording against the model; keep the keys) ---------
@@ -74,6 +84,20 @@ _INTENSITY_DIRECTIVE: dict[str, str] = {
 _LENGTH_MAX_TOKENS: dict[str, int] = {"brief": 300, "medium": 700, "long": 1200}
 
 
+def _protagonist_directive(protagonist: Protagonist) -> str:
+    if protagonist.role == "protagonist" and protagonist.character_name:
+        role = f", a {protagonist.character_role}" if protagonist.character_role else ""
+        return (
+            f"The user plays {protagonist.character_name}{role}. When they describe their "
+            f"character's actions, treat them as {protagonist.character_name}'s actions."
+        )
+    if protagonist.role == "protagonist":
+        return "The user plays the protagonist; treat their described actions as the protagonist's."
+    if protagonist.role == "narrator":
+        return "The user is an observer; narrate the events they describe."
+    return "The user is the author, directing the story from outside a character."
+
+
 def prompt_directives(config: SessionConfig) -> dict[str, str]:
     """Placeholder values for the continuation template, derived from the config."""
     return {
@@ -82,6 +106,7 @@ def prompt_directives(config: SessionConfig) -> dict[str, str]:
         "pov": _POV_DIRECTIVE.get(config.pov, config.pov),
         "target_length": _LENGTH_DIRECTIVE.get(config.target_length, ""),
         "content_intensity": _INTENSITY_DIRECTIVE.get(config.content_intensity, ""),
+        "protagonist": _protagonist_directive(config.protagonist),
     }
 
 

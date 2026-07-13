@@ -1,6 +1,7 @@
 """FastAPI backend for the Storyteller UI. Reuses story_loop / mem0 / world_state / reflection.
 
 Endpoints (Sprint 5):
+  GET    /story-starters                        genre-organised opening lines (wizard)
   GET    /sessions                              list sessions
   POST   /sessions                              create a session
   GET    /sessions/{id}                         session + turns + memory state
@@ -51,6 +52,7 @@ from core.story_loop import (
     load_prompt_template,
     render_prompt,
 )
+from core.story_starters import starters_for
 
 app = FastAPI(title="Storyteller API")
 
@@ -169,6 +171,14 @@ def _memory_state(world: WorldState, session_id: str) -> dict[str, Any]:
             for b in world.list(StoryBeat, session_id)
         ],
     }
+
+
+@app.get("/story-starters")
+def story_starters(genre: str | None = None) -> dict[str, Any]:
+    """Genre-organised opening lines for the new-session wizard (audit 2.6)."""
+    if genre is not None:
+        return {"genre": genre, "starters": starters_for(genre)[genre]}
+    return {"by_genre": starters_for()}
 
 
 @app.get("/sessions")

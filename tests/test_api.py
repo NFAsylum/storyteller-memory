@@ -97,6 +97,27 @@ def test_create_defaults_config_when_omitted(client) -> None:
     assert cfg["target_length"] == "medium"
 
 
+def test_story_starters_endpoint(client) -> None:
+    tc, _ = client
+    full = tc.get("/story-starters").json()
+    assert "fantasy" in full["by_genre"] and "scifi" in full["by_genre"]
+    one = tc.get("/story-starters", params={"genre": "scifi"}).json()
+    assert one["genre"] == "scifi"
+    assert len(one["starters"]) >= 3
+
+
+def test_create_with_protagonist_persists(client) -> None:
+    tc, _ = client
+    resp = tc.post(
+        "/sessions",
+        json={"name": "H", "config": {"protagonist": {"role": "protagonist", "character_name": "Aria"}}},
+    )
+    sid = resp.json()["id"]
+    cfg = tc.get(f"/sessions/{sid}").json()["config"]
+    assert cfg["protagonist"]["role"] == "protagonist"
+    assert cfg["protagonist"]["character_name"] == "Aria"
+
+
 def test_patch_config_updates(client) -> None:
     tc, _ = client
     sid = _create(tc)

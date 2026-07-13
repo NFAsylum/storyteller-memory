@@ -74,10 +74,14 @@ Pode variar de "casual" pra "brutal e explícito" sem intenção do usuário.
 **Fix:** slider "Content intensity: SFW / mature / dark". Mapeia em constraints no prompt.
 
 ### 2.5 [H, P1, 3h] Sem "protagonist configurator"
+> **Status: backend feito (T2.2).** `SessionConfig.protagonist` (role protagonist/author/narrator + character_name + character_role); a diretiva vai pro prompt (`{protagonist}`). Falta a tela do wizard "You are...".
+
 Usuário nem sabe se é o protagonista, ou se ele é o autor descrevendo protagonista. Sem definição de "who am I in this story".
 **Fix:** setup wizard: "You are... the protagonist / the narrator / the author. Your character is named... [name]. Your role: [warrior/detective/writer/...]".
 
 ### 2.6 [H, P1, 4h] Sem story-starter templates
+> **Status: backend feito (T2.3).** `data/story_starters.json` (~28 aberturas, 4 por gênero) + `GET /story-starters[?genre=]` validado por Pydantic. Falta o grid no wizard.
+
 Usuário abre nova sessão, tela em branco. Não sabe o que digitar.
 **Fix:** biblioteca de 20-30 story starters ("Aria enters the demon castle..." / "In a cyberpunk Tokyo, 2087..." / "The letter arrived on a Tuesday..." ) com botão "start with this".
 

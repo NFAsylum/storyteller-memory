@@ -53,6 +53,7 @@ class LocalLlmClient:
         system: str,
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
+        max_tokens: int | None = None,
     ) -> LlmResponse:
         # tools are accepted for Protocol parity but not forwarded — story narration
         # doesn't use them, and Anthropic->OpenAI schema translation is out of scope here.
@@ -63,7 +64,7 @@ class LocalLlmClient:
 
         completion = self._client.chat.completions.create(
             model=self.model,
-            max_tokens=self.max_tokens,
+            max_tokens=max_tokens or self.max_tokens,
             messages=chat_messages,
             temperature=self.temperature,
             seed=self.seed,

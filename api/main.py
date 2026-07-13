@@ -42,7 +42,7 @@ from sqlalchemy import delete, select, text
 from api.deps import Backend, get_backend
 from core.memory.reflection import LlmReflection
 from core.memory.retrieval_policy import ContextBundle, RetrievalPolicy
-from core.session_config import SessionConfig
+from core.session_config import SessionConfig, max_tokens_for
 from core.memory.world_state import (
     Character,
     Location,
@@ -374,7 +374,9 @@ def run_turn_streamed(
                 yield _sse("llm_start", {})
                 prompt = render_prompt(load_prompt_template(), bundle, body.text, config)
                 response = backend.llm.generate(
-                    system=prompt, messages=[{"role": "user", "content": body.text}]
+                    system=prompt,
+                    messages=[{"role": "user", "content": body.text}],
+                    max_tokens=max_tokens_for(config),
                 )
                 narrator_text = response.content
                 yield _sse("llm_done", {"narrator_text": narrator_text, "cost_usd": response.cost_usd})
@@ -466,6 +468,7 @@ def compare_turn(session_id: str, backend: Backend = Depends(get_backend)) -> di
         no_mem_text = backend.llm.generate(
             system=render_prompt(template, None, user_input, config),
             messages=[{"role": "user", "content": user_input}],
+            max_tokens=max_tokens_for(config),
         ).content
 
         # mem0_only: real retrieved context (not persisted)
@@ -473,6 +476,7 @@ def compare_turn(session_id: str, backend: Backend = Depends(get_backend)) -> di
         mem_text = backend.llm.generate(
             system=render_prompt(template, bundle, user_input, config),
             messages=[{"role": "user", "content": user_input}],
+            max_tokens=max_tokens_for(config),
         ).content
 
     return {
@@ -659,7 +663,9 @@ def _renarrate(backend: Backend, session, turn: Turn, user_input: str) -> str:
     config = SessionConfig(**session.config) if session.config else SessionConfig()
     prompt = render_prompt(load_prompt_template(), _bundle_from_stored(turn.retrieved_context), user_input, config)
     return backend.llm.generate(
-        system=prompt, messages=[{"role": "user", "content": user_input}]
+        system=prompt,
+        messages=[{"role": "user", "content": user_input}],
+        max_tokens=max_tokens_for(config),
     ).content
 
 

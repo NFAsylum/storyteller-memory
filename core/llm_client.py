@@ -31,6 +31,7 @@ class LlmClient(Protocol):
         system: str,
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
+        max_tokens: int | None = None,
     ) -> LlmResponse: ...
 
 

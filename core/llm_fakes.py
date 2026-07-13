@@ -32,6 +32,7 @@ class FakeLlmClient:
         system: str,
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
+        max_tokens: int | None = None,  # accepted for Protocol parity; the fake ignores it
     ) -> LlmResponse:
         user_text = str(messages[-1]["content"]) if messages else ""
         seed = self._seed(system, user_text)

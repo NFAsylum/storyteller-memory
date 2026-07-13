@@ -106,6 +106,36 @@ def test_state_reflects_world_state(client) -> None:
     assert [c["name"] for c in state["characters"]] == ["Aria"]
 
 
+def test_state_exposes_next_reflection_and_raw_count(client) -> None:
+    # audit 0.1: the UI needs a non-empty pre-reflection signal + when consolidation runs.
+    tc, _ = client
+    sid = _create(tc)
+    tc.post(f"/sessions/{sid}/turn", json={"text": "Aria chega ao castelo de Aldrath."})
+    tc.post(f"/sessions/{sid}/turn", json={"text": "Aria observa a corte."})
+    state = tc.get(f"/sessions/{sid}/state").json()
+    assert state["raw_memory_count"] == 2  # one raw memory stored per turn
+    assert state["next_reflection_at"] == 4  # after turn 2, next consolidation is turn 4
+
+
+def test_state_next_reflection_before_any_turn(client) -> None:
+    tc, _ = client
+    sid = _create(tc)
+    state = tc.get(f"/sessions/{sid}/state").json()
+    assert state["raw_memory_count"] == 0
+    assert state["next_reflection_at"] == 2  # first consolidation lands on turn 2
+
+
+def test_raw_memories_ordered_by_turn(client) -> None:
+    tc, _ = client
+    sid = _create(tc)
+    tc.post(f"/sessions/{sid}/turn", json={"text": "primeiro turno"})
+    tc.post(f"/sessions/{sid}/turn", json={"text": "segundo turno"})
+    rows = tc.get(f"/sessions/{sid}/raw-memories").json()
+    assert [r["turn"] for r in rows] == [1, 2]
+    assert "primeiro turno" in rows[0]["text"]
+    assert rows[0]["type"] == "story_turn"
+
+
 def test_compare_turn_returns_two_answers(client) -> None:
     tc, _ = client
     sid = _create(tc)

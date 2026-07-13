@@ -12,7 +12,7 @@ from api.deps import Backend, get_backend
 from api.main import _RATE_LIMIT_PER_MINUTE, app
 from core.llm_fakes import FakeLlmClient
 from core.memory.mem0_adapter import MemoryRecord
-from core.memory.world_state import Base, Character, WorldState
+from core.memory.world_state import Base, Character, Location, Relation, StoryBeat, WorldState
 
 
 class _FakeMem0:
@@ -262,6 +262,86 @@ def test_rate_limit_triggers_after_the_limit(client) -> None:
     codes = [tc.get("/sessions").status_code for _ in range(_RATE_LIMIT_PER_MINUTE + 1)]
     assert codes[:_RATE_LIMIT_PER_MINUTE] == [200] * _RATE_LIMIT_PER_MINUTE
     assert codes[_RATE_LIMIT_PER_MINUTE] == 429  # the (limit+1)th request is throttled
+
+
+def test_patch_and_delete_character(client) -> None:
+    tc, factory = client
+    sid = _create(tc)
+    with factory() as db:
+        c = WorldState(db).add(
+            Character(session_id=sid, name="Vex", traits=["cruel"], first_appeared_turn=1, last_seen_turn=1)
+        )
+        db.commit()
+        cid = c.id
+
+    r = tc.patch(
+        f"/sessions/{sid}/state/characters/{cid}",
+        json={"name": "Vexa", "traits": ["leal"], "first_appeared_turn": 1, "last_seen_turn": 3},
+    )
+    assert r.status_code == 200 and r.json()["name"] == "Vexa"
+    assert tc.get(f"/sessions/{sid}/state").json()["characters"][0]["traits"] == ["leal"]
+
+    assert tc.delete(f"/sessions/{sid}/state/characters/{cid}").status_code == 204
+    assert tc.get(f"/sessions/{sid}/state").json()["characters"] == []
+
+
+def test_delete_location_relation_and_beat(client) -> None:
+    tc, factory = client
+    sid = _create(tc)
+    with factory() as db:
+        w = WorldState(db)
+        loc = w.add(Location(session_id=sid, name="Aldrath", description="", first_visited_turn=1))
+        a = w.add(Character(session_id=sid, name="Aria", traits=[], first_appeared_turn=1, last_seen_turn=1))
+        b = w.add(Character(session_id=sid, name="Vex", traits=[], first_appeared_turn=1, last_seen_turn=1))
+        rel = w.add(Relation(session_id=sid, a_character_id=a.id, b_character_id=b.id, kind="enemy", valence=-2, since_turn=1))
+        beat = w.add(StoryBeat(session_id=sid, summary="Aria vs Vex", turn=1, importance=5, tags=[]))
+        db.commit()
+        loc_id, rel_id, beat_id = loc.id, rel.id, beat.id
+
+    assert tc.delete(f"/sessions/{sid}/state/locations/{loc_id}").status_code == 204
+    assert tc.delete(f"/sessions/{sid}/state/relations/{rel_id}").status_code == 204
+    assert tc.delete(f"/sessions/{sid}/state/story-beats/{beat_id}").status_code == 204
+    state = tc.get(f"/sessions/{sid}/state").json()
+    assert state["locations"] == [] and state["relations"] == [] and state["story_beats"] == []
+
+
+def test_crud_404_for_foreign_or_missing_entity(client) -> None:
+    tc, factory = client
+    sid = _create(tc)
+    other = _create(tc)
+    with factory() as db:
+        c = WorldState(db).add(
+            Character(session_id=other, name="X", traits=[], first_appeared_turn=1, last_seen_turn=1)
+        )
+        db.commit()
+        cid = c.id
+    assert tc.delete(f"/sessions/{sid}/state/characters/{cid}").status_code == 404  # foreign session
+    assert (
+        tc.patch(
+            f"/sessions/{sid}/state/characters/999999",
+            json={"name": "n", "traits": [], "first_appeared_turn": 1, "last_seen_turn": 1},
+        ).status_code
+        == 404
+    )
+
+
+def test_deleted_beat_absent_from_next_turn_context(client) -> None:
+    # audit 5.3 DoD: a deleted fact must not reach the next turn's context.
+    tc, factory = client
+    sid = _create(tc)
+    with factory() as db:
+        beat = WorldState(db).add(
+            StoryBeat(session_id=sid, summary="A traição de Vex", turn=1, importance=9, tags=[])
+        )
+        db.commit()
+        beat_id = beat.id
+
+    ctx1 = tc.post(f"/sessions/{sid}/turn", json={"text": "Aria avança."}).json()["retrieved_context"]
+    assert "A traição de Vex" in ctx1["structured_facts"]
+
+    tc.delete(f"/sessions/{sid}/state/story-beats/{beat_id}")
+    ctx2 = tc.post(f"/sessions/{sid}/turn", json={"text": "Aria continua."}).json()["retrieved_context"]
+    assert "A traição de Vex" not in ctx2["structured_facts"]
 
 
 def _sse_events(text: str) -> list[str]:

@@ -14,6 +14,8 @@ Endpoints (Sprint 5):
   GET    /sessions/{id}/raw-memories            raw mem0 memories (pre-reflection state), by turn
   PATCH  /sessions/{id}/config                  update narrative controls (genre/pov/tone/...)
   POST   /sessions/{id}/turn-streamed           run a turn, streaming progress as SSE events
+  PATCH/DELETE /sessions/{id}/state/{characters|locations|relations|story-beats}/{id}
+                                                edit or delete a hallucinated fact
 """
 
 from __future__ import annotations
@@ -143,6 +145,34 @@ class TurnInput(BaseModel):
     text: str
 
 
+class CharacterPatch(BaseModel):
+    name: str
+    traits: list[str]
+    first_appeared_turn: int
+    last_seen_turn: int
+
+
+class LocationPatch(BaseModel):
+    name: str
+    description: str
+    first_visited_turn: int
+
+
+class RelationPatch(BaseModel):
+    a_character_id: int
+    b_character_id: int
+    kind: str
+    valence: int
+    since_turn: int
+
+
+class StoryBeatPatch(BaseModel):
+    summary: str
+    turn: int
+    importance: int
+    tags: list[str]
+
+
 def _get_session(db, session_id: str) -> Session:
     session = db.get(Session, session_id)
     if session is None:
@@ -158,16 +188,17 @@ def _memory_state(world: WorldState, session_id: str) -> dict[str, Any]:
             for c in world.list(Character, session_id)
         ],
         "locations": [
-            {"name": loc.name, "description": loc.description, "first_visited_turn": loc.first_visited_turn}
+            {"id": loc.id, "name": loc.name, "description": loc.description,
+             "first_visited_turn": loc.first_visited_turn}
             for loc in world.list(Location, session_id)
         ],
         "relations": [
-            {"a_character_id": r.a_character_id, "b_character_id": r.b_character_id,
+            {"id": r.id, "a_character_id": r.a_character_id, "b_character_id": r.b_character_id,
              "kind": r.kind, "valence": r.valence, "since_turn": r.since_turn}
             for r in world.list(Relation, session_id)
         ],
         "story_beats": [
-            {"summary": b.summary, "turn": b.turn, "importance": b.importance, "tags": b.tags}
+            {"id": b.id, "summary": b.summary, "turn": b.turn, "importance": b.importance, "tags": b.tags}
             for b in world.list(StoryBeat, session_id)
         ],
     }
@@ -472,3 +503,120 @@ def raw_memories(session_id: str, backend: Backend = Depends(get_backend)) -> li
          "type": r.metadata.get("type")}
         for r in ordered
     ]
+
+
+# --- Fact editing/deletion (T3.3 / audit 5.3) --------------------------------------
+# The 7B reflection hallucinates; the user must be able to fix world_state. Deleting a
+# fact here removes it from the next turn's structured context (retrieval reads world_state).
+
+
+def _owned(world: WorldState, model: type, entity_id: int, session_id: str) -> Any:
+    entity = world.get(model, entity_id)
+    if entity is None or entity.session_id != session_id:
+        raise HTTPException(status_code=404, detail=f"{model.__name__} {entity_id} not found")
+    return entity
+
+
+@app.patch("/sessions/{session_id}/state/characters/{character_id}")
+def update_character(
+    session_id: str, character_id: int, body: CharacterPatch,
+    backend: Backend = Depends(get_backend),
+) -> dict[str, Any]:
+    with backend.session_factory() as db:
+        world = WorldState(db)
+        c = _owned(world, Character, character_id, session_id)
+        c.name, c.traits = body.name, body.traits
+        c.first_appeared_turn, c.last_seen_turn = body.first_appeared_turn, body.last_seen_turn
+        world.commit()
+        return {"id": c.id, "name": c.name, "traits": c.traits,
+                "first_appeared_turn": c.first_appeared_turn, "last_seen_turn": c.last_seen_turn}
+
+
+@app.delete("/sessions/{session_id}/state/characters/{character_id}")
+def delete_character(
+    session_id: str, character_id: int, backend: Backend = Depends(get_backend)
+) -> Response:
+    with backend.session_factory() as db:
+        world = WorldState(db)
+        world.delete(_owned(world, Character, character_id, session_id))
+        world.commit()
+    return Response(status_code=204)
+
+
+@app.patch("/sessions/{session_id}/state/locations/{location_id}")
+def update_location(
+    session_id: str, location_id: int, body: LocationPatch,
+    backend: Backend = Depends(get_backend),
+) -> dict[str, Any]:
+    with backend.session_factory() as db:
+        world = WorldState(db)
+        loc = _owned(world, Location, location_id, session_id)
+        loc.name, loc.description = body.name, body.description
+        loc.first_visited_turn = body.first_visited_turn
+        world.commit()
+        return {"id": loc.id, "name": loc.name, "description": loc.description,
+                "first_visited_turn": loc.first_visited_turn}
+
+
+@app.delete("/sessions/{session_id}/state/locations/{location_id}")
+def delete_location(
+    session_id: str, location_id: int, backend: Backend = Depends(get_backend)
+) -> Response:
+    with backend.session_factory() as db:
+        world = WorldState(db)
+        world.delete(_owned(world, Location, location_id, session_id))
+        world.commit()
+    return Response(status_code=204)
+
+
+@app.patch("/sessions/{session_id}/state/relations/{relation_id}")
+def update_relation(
+    session_id: str, relation_id: int, body: RelationPatch,
+    backend: Backend = Depends(get_backend),
+) -> dict[str, Any]:
+    with backend.session_factory() as db:
+        world = WorldState(db)
+        rel = _owned(world, Relation, relation_id, session_id)
+        rel.a_character_id, rel.b_character_id = body.a_character_id, body.b_character_id
+        rel.kind, rel.valence, rel.since_turn = body.kind, body.valence, body.since_turn
+        world.commit()
+        return {"id": rel.id, "a_character_id": rel.a_character_id,
+                "b_character_id": rel.b_character_id, "kind": rel.kind,
+                "valence": rel.valence, "since_turn": rel.since_turn}
+
+
+@app.delete("/sessions/{session_id}/state/relations/{relation_id}")
+def delete_relation(
+    session_id: str, relation_id: int, backend: Backend = Depends(get_backend)
+) -> Response:
+    with backend.session_factory() as db:
+        world = WorldState(db)
+        world.delete(_owned(world, Relation, relation_id, session_id))
+        world.commit()
+    return Response(status_code=204)
+
+
+@app.patch("/sessions/{session_id}/state/story-beats/{beat_id}")
+def update_story_beat(
+    session_id: str, beat_id: int, body: StoryBeatPatch,
+    backend: Backend = Depends(get_backend),
+) -> dict[str, Any]:
+    with backend.session_factory() as db:
+        world = WorldState(db)
+        beat = _owned(world, StoryBeat, beat_id, session_id)
+        beat.summary, beat.turn = body.summary, body.turn
+        beat.importance, beat.tags = body.importance, body.tags
+        world.commit()
+        return {"id": beat.id, "summary": beat.summary, "turn": beat.turn,
+                "importance": beat.importance, "tags": beat.tags}
+
+
+@app.delete("/sessions/{session_id}/state/story-beats/{beat_id}")
+def delete_story_beat(
+    session_id: str, beat_id: int, backend: Backend = Depends(get_backend)
+) -> Response:
+    with backend.session_factory() as db:
+        world = WorldState(db)
+        world.delete(_owned(world, StoryBeat, beat_id, session_id))
+        world.commit()
+    return Response(status_code=204)

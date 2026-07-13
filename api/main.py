@@ -11,6 +11,7 @@ Endpoints (Sprint 5):
   POST   /sessions/{id}/compare-turn            re-run last user turn no_memory vs mem0_only
   GET    /sessions/{id}/state                   world_state (+ raw_memory_count, next_reflection_at)
   GET    /sessions/{id}/raw-memories            raw mem0 memories (pre-reflection state), by turn
+  PATCH  /sessions/{id}/config                  update narrative controls (genre/pov/tone/...)
 """
 
 from __future__ import annotations
@@ -25,12 +26,13 @@ from typing import Any
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import delete, select, text
 
 from api.deps import Backend, get_backend
 from core.memory.reflection import LlmReflection
 from core.memory.retrieval_policy import RetrievalPolicy
+from core.session_config import SessionConfig
 from core.memory.world_state import (
     Character,
     Location,
@@ -129,6 +131,7 @@ def _next_reflection_at(last_turn: int) -> int:
 class CreateSession(BaseModel):
     name: str
     brief: str = ""
+    config: SessionConfig = Field(default_factory=SessionConfig)
 
 
 class TurnInput(BaseModel):
@@ -179,9 +182,18 @@ def list_sessions(backend: Backend = Depends(get_backend)) -> list[dict[str, Any
 def create_session(body: CreateSession, backend: Backend = Depends(get_backend)) -> dict[str, Any]:
     session_id = uuid.uuid4().hex[:16]
     with backend.session_factory() as db:
-        db.add(Session(id=session_id, name=body.name, brief=body.brief, created_at=_now(), last_turn=0))
+        db.add(
+            Session(
+                id=session_id,
+                name=body.name,
+                brief=body.brief,
+                created_at=_now(),
+                last_turn=0,
+                config=body.config.model_dump(),
+            )
+        )
         db.commit()
-    return {"id": session_id, "name": body.name, "last_turn": 0}
+    return {"id": session_id, "name": body.name, "last_turn": 0, "config": body.config.model_dump()}
 
 
 @app.get("/sessions/{session_id}")
@@ -197,6 +209,7 @@ def get_session(session_id: str, backend: Backend = Depends(get_backend)) -> dic
             "name": session.name,
             "brief": session.brief,
             "last_turn": session.last_turn,
+            "config": session.config or SessionConfig().model_dump(),
             "turns": [
                 {"turn_number": t.turn_number, "user_input": t.user_input,
                  "narrator_text": t.narrator_text, "created_at": t.created_at}
@@ -224,10 +237,22 @@ def delete_session(session_id: str, backend: Backend = Depends(get_backend)) -> 
     return Response(status_code=204)
 
 
+@app.patch("/sessions/{session_id}/config")
+def update_config(
+    session_id: str, body: SessionConfig, backend: Backend = Depends(get_backend)
+) -> dict[str, Any]:
+    with backend.session_factory() as db:
+        session = _get_session(db, session_id)
+        session.config = body.model_dump()
+        db.commit()
+        return {"id": session_id, "config": session.config}
+
+
 @app.post("/sessions/{session_id}/turn")
 def run_turn(session_id: str, body: TurnInput, backend: Backend = Depends(get_backend)) -> dict[str, Any]:
     with backend.session_factory() as db:
         session = _get_session(db, session_id)
+        config = SessionConfig(**session.config) if session.config else SessionConfig()
         memory = backend.memory_for(session_id)
         world = WorldState(db)
         loop = StoryLoop(
@@ -237,6 +262,7 @@ def run_turn(session_id: str, body: TurnInput, backend: Backend = Depends(get_ba
             retrieval_policy=RetrievalPolicy(memory, world),
             reflection=LlmReflection(backend.llm, world, memory),
             start_turn=session.last_turn,
+            config=config,
         )
         result = loop.run_turn(body.text)
         turn_number = result.retrieved_context.get("turn", session.last_turn + 1)
@@ -289,7 +315,8 @@ def reflect(session_id: str, backend: Backend = Depends(get_backend)) -> dict[st
 @app.post("/sessions/{session_id}/compare-turn")
 def compare_turn(session_id: str, backend: Backend = Depends(get_backend)) -> dict[str, Any]:
     with backend.session_factory() as db:
-        _get_session(db, session_id)
+        session = _get_session(db, session_id)
+        config = SessionConfig(**session.config) if session.config else SessionConfig()
         last = db.scalars(
             select(Turn).where(Turn.session_id == session_id).order_by(Turn.turn_number.desc())
         ).first()
@@ -302,14 +329,14 @@ def compare_turn(session_id: str, backend: Backend = Depends(get_backend)) -> di
 
         # no_memory: no context at all
         no_mem_text = backend.llm.generate(
-            system=render_prompt(template, None, user_input),
+            system=render_prompt(template, None, user_input, config),
             messages=[{"role": "user", "content": user_input}],
         ).content
 
         # mem0_only: real retrieved context (not persisted)
         bundle = RetrievalPolicy(memory, world).build_context(session_id, last.turn_number, user_input)
         mem_text = backend.llm.generate(
-            system=render_prompt(template, bundle, user_input),
+            system=render_prompt(template, bundle, user_input, config),
             messages=[{"role": "user", "content": user_input}],
         ).content
 

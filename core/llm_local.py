@@ -62,12 +62,19 @@ class LocalLlmClient:
             chat_messages.append({"role": "system", "content": system})
         chat_messages.extend(messages)
 
+        # Anti-repetition sampling (T-REP.1): temperature=0 alone lets the 7B lock into
+        # repeated phrasing (or an English drift); the penalties nudge it off already-emitted
+        # tokens without breaking seed-determinism — they only bite when a repeat would win.
+        # repeat_penalty is llama.cpp-specific (via extra_body); ignored by OpenAI cloud.
         completion = self._client.chat.completions.create(
             model=self.model,
             max_tokens=max_tokens or self.max_tokens,
             messages=chat_messages,
             temperature=self.temperature,
             seed=self.seed,
+            frequency_penalty=0.3,
+            presence_penalty=0.3,
+            extra_body={"repeat_penalty": 1.15},
         )
         choice = completion.choices[0]
         usage = completion.usage

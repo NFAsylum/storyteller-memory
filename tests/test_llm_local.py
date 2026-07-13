@@ -49,6 +49,19 @@ def test_generate_prepends_system_message() -> None:
     assert kwargs["seed"] == 42
 
 
+def test_generate_passes_anti_repetition_sampling() -> None:
+    fake_sdk = MagicMock()
+    fake_sdk.chat.completions.create.return_value = _fake_completion()
+    client = LocalLlmClient(url="http://local/v1", model="qwen", client=fake_sdk)
+
+    client.generate(system="s", messages=[{"role": "user", "content": "hi"}])
+
+    _, kwargs = fake_sdk.chat.completions.create.call_args
+    assert kwargs["frequency_penalty"] == 0.3
+    assert kwargs["presence_penalty"] == 0.3
+    assert kwargs["extra_body"] == {"repeat_penalty": 1.15}
+
+
 def test_factory_returns_local_when_backend_local(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LOCAL_LLM_URL", "http://local/v1")
     monkeypatch.setenv("LOCAL_LLM_MODEL", "qwen")

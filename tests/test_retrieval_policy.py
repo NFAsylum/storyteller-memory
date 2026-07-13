@@ -75,3 +75,53 @@ def test_top_memories_capped_by_top_k(world: WorldState) -> None:
 
     bundle = policy.build_context(SESSION, current_turn=1, user_input="q")
     assert len(bundle.raw_memories) == 3
+
+
+def test_score_threshold_filters_weak_memories(world: WorldState) -> None:
+    memory = _FakeMemory([
+        MemoryRecord(id="m1", text="forte", metadata={"turn": 1}, score=0.8),
+        MemoryRecord(id="m2", text="fraca", metadata={"turn": 2}, score=0.3),
+    ])
+    policy = RetrievalPolicy(memory, world)  # default threshold 0.5
+
+    bundle = policy.build_context(SESSION, current_turn=1, user_input="q")
+    assert bundle.raw_memories == ["forte"]  # 0.3 dropped, 0.8 kept
+
+
+def test_score_threshold_is_customizable(world: WorldState) -> None:
+    memory = _FakeMemory([
+        MemoryRecord(id="m1", text="a", metadata={"turn": 1}, score=0.6),
+        MemoryRecord(id="m2", text="b", metadata={"turn": 2}, score=0.4),
+    ])
+    policy = RetrievalPolicy(memory, world, score_threshold=0.65)
+
+    bundle = policy.build_context(SESSION, current_turn=1, user_input="q")
+    assert bundle.raw_memories == []  # both below the custom 0.65 threshold
+
+
+def test_dedup_overlap_drops_raw_when_matching_fact(world: WorldState) -> None:
+    world.add(
+        StoryBeat(session_id=SESSION, summary="Aria descobre a traição de Vex", turn=8, importance=9, tags=[])
+    )
+    world.commit()
+    memory = _FakeMemory([
+        MemoryRecord(id="m1", text="Aria descobre a traição de Vex", metadata={"turn": 8}, score=0.9),
+        MemoryRecord(id="m2", text="Chove forte sobre o porto ao amanhecer", metadata={"turn": 9}, score=0.9),
+    ])
+    policy = RetrievalPolicy(memory, world)
+
+    bundle = policy.build_context(SESSION, current_turn=10, user_input="q")
+    assert "Aria descobre a traição de Vex" not in bundle.raw_memories  # dup of the beat → dropped
+    assert "Chove forte sobre o porto ao amanhecer" in bundle.raw_memories  # orthogonal → kept
+
+
+def test_dedup_preserves_orthogonal_raws(world: WorldState) -> None:
+    world.add(StoryBeat(session_id=SESSION, summary="Aria jura vingança", turn=5, importance=7, tags=[]))
+    world.commit()
+    memory = _FakeMemory([
+        MemoryRecord(id="m1", text="Vex acende uma vela azul", metadata={"turn": 6}, score=0.9),
+    ])
+    policy = RetrievalPolicy(memory, world)
+
+    bundle = policy.build_context(SESSION, current_turn=7, user_input="q")
+    assert bundle.raw_memories == ["Vex acende uma vela azul"]

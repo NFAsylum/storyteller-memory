@@ -9,7 +9,8 @@ Endpoints (Sprint 5):
   GET    /sessions/{id}/turns/{turn_id}/context context bundle used that turn
   POST   /sessions/{id}/reflect                 force reflection
   POST   /sessions/{id}/compare-turn            re-run last user turn no_memory vs mem0_only
-  GET    /sessions/{id}/state                   world_state (chars/locs/rels/beats)
+  GET    /sessions/{id}/state                   world_state (+ raw_memory_count, next_reflection_at)
+  GET    /sessions/{id}/raw-memories            raw mem0 memories (pre-reflection state), by turn
 """
 
 from __future__ import annotations
@@ -36,7 +37,12 @@ from core.memory.world_state import (
     Turn,
     WorldState,
 )
-from core.story_loop import StoryLoop, load_prompt_template, render_prompt
+from core.story_loop import (
+    DEFAULT_REFLECT_EVERY,
+    StoryLoop,
+    load_prompt_template,
+    render_prompt,
+)
 
 app = FastAPI(title="Storyteller API")
 
@@ -58,6 +64,11 @@ def health() -> dict[str, str]:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _next_reflection_at(last_turn: int) -> int:
+    """Turn number at which the next automatic consolidation will fire (audit 0.1 UX)."""
+    return (last_turn // DEFAULT_REFLECT_EVERY + 1) * DEFAULT_REFLECT_EVERY
 
 
 class CreateSession(BaseModel):
@@ -257,5 +268,25 @@ def compare_turn(session_id: str, backend: Backend = Depends(get_backend)) -> di
 @app.get("/sessions/{session_id}/state")
 def session_state(session_id: str, backend: Backend = Depends(get_backend)) -> dict[str, Any]:
     with backend.session_factory() as db:
+        session = _get_session(db, session_id)
+        last_turn = session.last_turn
+        state = _memory_state(WorldState(db), session_id)
+    # Surface the raw mem0 memories (populated every turn) and the next consolidation
+    # turn so the UI can show a non-empty "pre-reflection" state instead of empty tabs.
+    state["raw_memory_count"] = len(backend.memory_for(session_id).list_all())
+    state["next_reflection_at"] = _next_reflection_at(last_turn)
+    return state
+
+
+@app.get("/sessions/{session_id}/raw-memories")
+def raw_memories(session_id: str, backend: Backend = Depends(get_backend)) -> list[dict[str, Any]]:
+    """Raw mem0 memories for the session, ordered by turn — the pre-reflection state."""
+    with backend.session_factory() as db:
         _get_session(db, session_id)
-        return _memory_state(WorldState(db), session_id)
+    records = backend.memory_for(session_id).list_all()
+    ordered = sorted(records, key=lambda r: r.metadata.get("turn", 0))
+    return [
+        {"id": r.id, "text": r.text, "turn": r.metadata.get("turn"),
+         "type": r.metadata.get("type")}
+        for r in ordered
+    ]

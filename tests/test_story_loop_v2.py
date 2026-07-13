@@ -109,6 +109,23 @@ def test_reflection_fires_every_five_turns(world: WorldState) -> None:
     assert "Aria" in {c.name for c in world.list(Character, SESSION)}
 
 
+def test_reflection_fires_at_turn_two_by_default(world: WorldState) -> None:
+    # audit 0.1: with the default cadence, consolidation must run by turn 2 so the
+    # Memory Inspector is not empty after a couple of turns.
+    memory = _FakeMem0()
+    loop = StoryLoop(
+        SESSION,
+        memory=memory,
+        llm=_CapturingLlm(),
+        retrieval_policy=RetrievalPolicy(memory, world),
+        reflection=FakeReflection(world, memory),  # no reflect_every -> DEFAULT_REFLECT_EVERY (2)
+    )
+    loop.run_turn(ARIA_TURNS[0])
+    assert world.list(StoryBeat, SESSION) == []  # nothing consolidated after turn 1
+    loop.run_turn(ARIA_TURNS[1])
+    assert len(world.list(StoryBeat, SESSION)) == 1  # reflection fired at turn 2
+
+
 def test_v1_behavior_without_policy_or_reflection(world: WorldState) -> None:
     memory = _FakeMem0()
     loop = StoryLoop(SESSION, memory=memory, llm=FakeLlmClient())  # no retrieval/reflection

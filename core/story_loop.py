@@ -19,7 +19,9 @@ from core.memory.retrieval_policy import ContextBundle, RetrievalPolicy
 
 _PROMPT_PATH = Path(__file__).parent / "prompts" / "story_continuation.txt"
 _EMPTY_SLOT = "(none yet)"
-DEFAULT_REFLECT_EVERY = 5
+# Consolidate every 2 turns so the Memory Inspector populates early (audit 0.1): a
+# user who writes 3 turns must see characters/beats, not empty tabs. Was 5.
+DEFAULT_REFLECT_EVERY = 2
 
 
 @dataclass(frozen=True)

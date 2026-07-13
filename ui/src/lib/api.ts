@@ -63,12 +63,14 @@ export interface Character {
 }
 
 export interface Location {
+  id: number;
   name: string;
   description: string;
   first_visited_turn: number;
 }
 
 export interface Relation {
+  id: number;
   a_character_id: number;
   b_character_id: number;
   kind: string;
@@ -77,6 +79,7 @@ export interface Relation {
 }
 
 export interface StoryBeat {
+  id: number;
   summary: string;
   turn: number;
   importance: number;
@@ -169,4 +172,36 @@ export const api = {
   compareTurn: (id: string) =>
     request<CompareResult>(`/sessions/${id}/compare-turn`, { method: "POST" }),
   getState: (id: string) => request<MemoryState>(`/sessions/${id}/state`),
+
+  updateCharacter: (id: string, characterId: number, body: Omit<Character, "id">) =>
+    request<Character>(`/sessions/${id}/state/characters/${characterId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteCharacter: (id: string, characterId: number) =>
+    request<void>(`/sessions/${id}/state/characters/${characterId}`, { method: "DELETE" }),
+
+  updateLocation: (id: string, locationId: number, body: Omit<Location, "id">) =>
+    request<Location>(`/sessions/${id}/state/locations/${locationId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteLocation: (id: string, locationId: number) =>
+    request<void>(`/sessions/${id}/state/locations/${locationId}`, { method: "DELETE" }),
+
+  updateRelation: (id: string, relationId: number, body: Omit<Relation, "id">) =>
+    request<Relation>(`/sessions/${id}/state/relations/${relationId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteRelation: (id: string, relationId: number) =>
+    request<void>(`/sessions/${id}/state/relations/${relationId}`, { method: "DELETE" }),
+
+  updateStoryBeat: (id: string, beatId: number, body: Omit<StoryBeat, "id">) =>
+    request<StoryBeat>(`/sessions/${id}/state/story-beats/${beatId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteStoryBeat: (id: string, beatId: number) =>
+    request<void>(`/sessions/${id}/state/story-beats/${beatId}`, { method: "DELETE" }),
 };

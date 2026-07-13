@@ -243,6 +243,49 @@ def test_rate_limit_triggers_after_the_limit(client) -> None:
     assert codes[_RATE_LIMIT_PER_MINUTE] == 429  # the (limit+1)th request is throttled
 
 
+def _sse_events(text: str) -> list[str]:
+    return [ln[len("event: ") :] for ln in text.splitlines() if ln.startswith("event: ")]
+
+
+def test_turn_streamed_emits_events_in_order(client) -> None:
+    tc, _ = client
+    sid = _create(tc)
+    resp = tc.post(f"/sessions/{sid}/turn-streamed", json={"text": "Aria entra."})
+    assert resp.status_code == 200
+    assert _sse_events(resp.text) == [
+        "retrieval_start",
+        "retrieval_done",
+        "llm_start",
+        "llm_done",
+        "reflection_check",
+        "turn_stored",
+    ]
+    assert tc.get(f"/sessions/{sid}").json()["last_turn"] == 1  # turn persisted
+
+
+def test_turn_streamed_errors_without_storing(tmp_path: Path) -> None:
+    engine = create_engine(f"sqlite:///{tmp_path / 'sse_fail.db'}")
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(engine, expire_on_commit=False)
+
+    class _FailingLlm:
+        def generate(self, system, messages, tools=None):
+            raise RuntimeError("llm down")
+
+    backend = Backend(session_factory=factory, llm=_FailingLlm(), memory_for=_MemoryProvider())
+    app.dependency_overrides[get_backend] = lambda: backend
+    try:
+        tc = TestClient(app)
+        sid = tc.post("/sessions", json={"name": "x"}).json()["id"]
+        resp = tc.post(f"/sessions/{sid}/turn-streamed", json={"text": "boom"})
+        events = _sse_events(resp.text)
+        assert "error" in events
+        assert "turn_stored" not in events
+        assert tc.get(f"/sessions/{sid}").json()["last_turn"] == 0  # nothing stored
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_delete_rolls_back_when_mem0_clear_fails(tmp_path: Path) -> None:
     # F1.4: if mem0.clear() raises, the DB delete must roll back and the client get 500.
     engine = create_engine(f"sqlite:///{tmp_path / 'api_fail.db'}")

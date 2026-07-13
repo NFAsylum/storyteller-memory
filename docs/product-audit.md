@@ -106,6 +106,8 @@ Botão existe mas não é destacado como o valor central do produto.
 ## 4. Feedback e status
 
 ### 4.1 [C, P0, 2h] LLM turn latência sem indicador visual
+> **Status: backend feito (T1.4).** `POST /sessions/{id}/turn-streamed` (SSE) emite `retrieval_start → retrieval_done → llm_start → llm_done → reflection_check → turn_stored`; erro de LLM emite `error` e não persiste turno parcial. Falta a UI consumir o stream. Token-by-token (`llm_token`) fica de follow-up — exige o `LlmClient` expor streaming (muda o Protocol).
+
 Você digita, clica submit, spinner genérico por 15-30s. Sem "carregando prompt / gerando / consolidando memória".
 **Fix:** progressive feedback: "Retrieving relevant memories... Generating narration (usually 15-25s)... Storing turn... Done."
 

@@ -204,4 +204,24 @@ export const api = {
     }),
   deleteStoryBeat: (id: string, beatId: number) =>
     request<void>(`/sessions/${id}/state/story-beats/${beatId}`, { method: "DELETE" }),
+
+  editTurn: (id: string, turnNumber: number, text: string) =>
+    request<{ turn_number: number; user_input: string; narrator_text: string }>(
+      `/sessions/${id}/turns/${turnNumber}`,
+      { method: "PATCH", body: JSON.stringify({ text }) },
+    ),
+  regenerateTurn: (id: string, turnNumber: number) =>
+    request<{ turn_number: number; narrator_text: string }>(
+      `/sessions/${id}/turns/${turnNumber}/regenerate`,
+      { method: "POST" },
+    ),
+  deleteTurn: (id: string, turnNumber: number) =>
+    request<void>(`/sessions/${id}/turns/${turnNumber}`, { method: "DELETE" }),
+  forkSession: (id: string, fromTurn: number) =>
+    request<{ id: string; name: string; last_turn: number }>(
+      `/sessions/${id}/fork?from_turn=${fromTurn}`,
+      { method: "POST" },
+    ),
+  exportUrl: (id: string, format: "markdown" | "txt" | "json") =>
+    `${API_URL}/sessions/${id}/export?format=${format}`,
 };

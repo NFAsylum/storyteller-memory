@@ -122,6 +122,9 @@ class Mem0Adapter:
     def list_all(self) -> list[MemoryRecord]:
         return self._to_records(self._memory.get_all(user_id=self.session_id))
 
+    def delete(self, memory_id: str) -> None:
+        self._memory.delete(memory_id)
+
     def clear(self) -> None:
         self._memory.delete_all(user_id=self.session_id)
 

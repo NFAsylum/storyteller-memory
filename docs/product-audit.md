@@ -158,10 +158,12 @@ Reflection gera resumos concatenados sem estrutura visual.
 ## 6. Chat UX
 
 ### 6.1 [H, P1, 3h] Sem edição/regeneração de turno
+> **Status: backend feito (T4.1).** `PATCH /sessions/{id}/turns/{n}` (edita input + re-narra reusando o contexto original) e `POST .../regenerate` (mesma entrada, nova amostra). Atualizam o world_state DB + a memória mem0 do turno. Falta os botões no chat (frontend).
 Se o LLM produziu algo ruim, usuário não pode editar sua ação nem regenerar a resposta.
 **Fix:** botão "edit" no user turn (com aviso "isso vai invalidar turnos posteriores"), botão "regenerate" no narrator turn (usa retrieval bundle idêntico + nova amostra do LLM).
 
 ### 6.2 [H, P1, 3h] Sem "undo" turn
+> **Status: backend feito (T4.1).** `DELETE /sessions/{id}/turns/{n}` remove o turno do DB + a memória mem0 dele; se era o head, `last_turn` recua. Falta o botão undo (frontend).
 Digita algo, arrepende, sem forma de desfazer.
 **Fix:** last turn tem botão "undo" que remove do mem0 + world_state + chat.
 
@@ -178,6 +180,7 @@ Turno de 3 dias atrás vs 3 min atrás parece igual.
 ## 7. Persistência e ciclo de vida
 
 ### 7.1 [C, P0, 4h] Sem export da história
+> **Status: backend feito (T5.1).** `GET /sessions/{id}/export?format=markdown|txt|json` (attachment). markdown=chat com headings; txt=só narração; json=dump completo (turns+world_state+config). Falta o botão de download (frontend). PDF/epub ficam de follow-up.
 Usuário escreveu 50 turnos, quer publicar/compartilhar. Sem export pra .md/.txt/.pdf/.epub.
 **Fix:** botão "Export": Markdown (chat format), plain text (só narração formatada como conto), PDF (chapter book format), epub (opcional).
 
@@ -186,6 +189,7 @@ Se usuário limpa cookies ou muda de browser, perde acesso mesmo com dados no se
 **Fix:** login mínimo (Google/email) — session ID mapeado a account, não só cookie.
 
 ### 7.3 [H, P1, 2h] Sem duplicate/fork de session
+> **Status: backend feito (T5.2).** `POST /sessions/{id}/fork?from_turn=N` cria cópia independente até o turno N (turns + world_state com remapeamento de ids de personagem + memórias mem0). Nome `"<orig> — fork"`. Falta o botão (frontend).
 Se usuário quer explorar "what if" a partir do turno 20, tem que criar do zero.
 **Fix:** botão "Fork from this turn" cria nova session com estado até esse ponto.
 

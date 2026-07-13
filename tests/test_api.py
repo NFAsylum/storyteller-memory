@@ -33,6 +33,9 @@ class _FakeMem0:
     def list_all(self) -> list[MemoryRecord]:
         return list(self._records)
 
+    def delete(self, memory_id: str) -> None:
+        self._records = [r for r in self._records if r.id != memory_id]
+
     def clear(self) -> None:
         self._records.clear()
 
@@ -342,6 +345,96 @@ def test_deleted_beat_absent_from_next_turn_context(client) -> None:
     tc.delete(f"/sessions/{sid}/state/story-beats/{beat_id}")
     ctx2 = tc.post(f"/sessions/{sid}/turn", json={"text": "Aria continua."}).json()["retrieved_context"]
     assert "A traição de Vex" not in ctx2["structured_facts"]
+
+
+def test_edit_turn_updates_input_and_renarrates(client) -> None:
+    tc, _ = client
+    sid = _create(tc)
+    tc.post(f"/sessions/{sid}/turn", json={"text": "Aria entra."})
+    r = tc.patch(f"/sessions/{sid}/turns/1", json={"text": "Aria recua."})
+    assert r.status_code == 200
+    assert r.json()["user_input"] == "Aria recua."
+    assert r.json()["narrator_text"].strip() != ""
+    assert tc.get(f"/sessions/{sid}").json()["turns"][0]["user_input"] == "Aria recua."
+
+
+def test_regenerate_turn_keeps_input(client) -> None:
+    tc, _ = client
+    sid = _create(tc)
+    tc.post(f"/sessions/{sid}/turn", json={"text": "Aria entra."})
+    r = tc.post(f"/sessions/{sid}/turns/1/regenerate")
+    assert r.status_code == 200
+    assert r.json()["narrator_text"].strip() != ""
+    assert tc.get(f"/sessions/{sid}").json()["turns"][0]["user_input"] == "Aria entra."
+
+
+def test_delete_turn_removes_it_and_its_memory(client) -> None:
+    tc, _ = client
+    sid = _create(tc)
+    tc.post(f"/sessions/{sid}/turn", json={"text": "turno 1"})
+    tc.post(f"/sessions/{sid}/turn", json={"text": "turno 2"})
+    assert tc.delete(f"/sessions/{sid}/turns/2").status_code == 204
+    session = tc.get(f"/sessions/{sid}").json()
+    assert [t["turn_number"] for t in session["turns"]] == [1]
+    assert session["last_turn"] == 1  # head stepped back
+    rows = tc.get(f"/sessions/{sid}/raw-memories").json()
+    assert [r["turn"] for r in rows] == [1]  # mem0 entry for turn 2 gone
+
+
+def test_edit_missing_turn_404(client) -> None:
+    tc, _ = client
+    sid = _create(tc)
+    assert tc.patch(f"/sessions/{sid}/turns/99", json={"text": "x"}).status_code == 404
+
+
+def test_export_formats(client) -> None:
+    tc, _ = client
+    sid = _create(tc, name="Saga")
+    tc.post(f"/sessions/{sid}/turn", json={"text": "Aria entra no castelo."})
+
+    md = tc.get(f"/sessions/{sid}/export", params={"format": "markdown"})
+    assert md.status_code == 200
+    assert "text/markdown" in md.headers["content-type"]
+    assert "attachment" in md.headers["content-disposition"]
+    assert "# Saga" in md.text and "Aria entra no castelo." in md.text
+
+    txt = tc.get(f"/sessions/{sid}/export", params={"format": "txt"}).text
+    assert txt.strip() != "" and "**Você:**" not in txt  # prose only, no chat labels
+
+    data = tc.get(f"/sessions/{sid}/export", params={"format": "json"}).json()
+    assert data["name"] == "Saga" and len(data["turns"]) == 1 and "memory_state" in data
+
+
+def test_export_unknown_format_400(client) -> None:
+    tc, _ = client
+    sid = _create(tc)
+    assert tc.get(f"/sessions/{sid}/export", params={"format": "pdf"}).status_code == 400
+
+
+def test_fork_creates_independent_copy(client) -> None:
+    tc, factory = client
+    sid = _create(tc, name="Original")
+    tc.post(f"/sessions/{sid}/turn", json={"text": "turno 1"})
+    tc.post(f"/sessions/{sid}/turn", json={"text": "turno 2"})
+    with factory() as db:
+        WorldState(db).add(
+            Character(session_id=sid, name="Aria", traits=["leal"], first_appeared_turn=1, last_seen_turn=2)
+        )
+        db.commit()
+
+    forked = tc.post(f"/sessions/{sid}/fork", params={"from_turn": 1})
+    assert forked.status_code == 201
+    fid = forked.json()["id"]
+    assert forked.json()["name"] == "Original — fork"
+
+    # fork has only turn 1 + the character (first_appeared_turn 1)
+    fsession = tc.get(f"/sessions/{fid}").json()
+    assert [t["turn_number"] for t in fsession["turns"]] == [1]
+    assert [c["name"] for c in fsession["memory_state"]["characters"]] == ["Aria"]
+
+    # editing the fork does not touch the original
+    tc.patch(f"/sessions/{fid}/turns/1", json={"text": "turno 1 alterado"})
+    assert tc.get(f"/sessions/{sid}").json()["turns"][0]["user_input"] == "turno 1"
 
 
 def _sse_events(text: str) -> list[str]:

@@ -14,6 +14,10 @@ Endpoints (Sprint 5):
   GET    /sessions/{id}/raw-memories            raw mem0 memories (pre-reflection state), by turn
   PATCH  /sessions/{id}/config                  update narrative controls (genre/pov/tone/...)
   POST   /sessions/{id}/turn-streamed           run a turn, streaming progress as SSE events
+  PATCH/POST-regenerate/DELETE /sessions/{id}/turns/{n}
+                                                edit / regenerate / undo a turn
+  GET    /sessions/{id}/export?format=          export story (markdown|txt|json)
+  POST   /sessions/{id}/fork?from_turn=N        fork an independent copy up to turn N
   PATCH/DELETE /sessions/{id}/state/{characters|locations|relations|story-beats}/{id}
                                                 edit or delete a hallucinated fact
 """
@@ -37,7 +41,7 @@ from sqlalchemy import delete, select, text
 
 from api.deps import Backend, get_backend
 from core.memory.reflection import LlmReflection
-from core.memory.retrieval_policy import RetrievalPolicy
+from core.memory.retrieval_policy import ContextBundle, RetrievalPolicy
 from core.session_config import SessionConfig
 from core.memory.world_state import (
     Character,
@@ -620,3 +624,204 @@ def delete_story_beat(
         world.delete(_owned(world, StoryBeat, beat_id, session_id))
         world.commit()
     return Response(status_code=204)
+
+
+# --- Turn edit / regenerate / undo (T4.1 / audit 6.1-6.2) --------------------------
+
+
+def _bundle_from_stored(ctx: dict[str, Any]) -> ContextBundle:
+    """Rebuild the ContextBundle stored on the turn so a re-narration reuses it."""
+    return ContextBundle(
+        raw_memories=ctx.get("raw_memories", []),
+        structured_facts=ctx.get("structured_facts", []),
+        active_characters=ctx.get("active_characters", []),
+        token_estimate=ctx.get("token_estimate", 0),
+    )
+
+
+def _delete_turn_memory(memory: Any, turn_number: int) -> None:
+    """Drop the mem0 entry for a turn so an edited/removed turn stops surfacing."""
+    for record in memory.list_all():
+        if record.metadata.get("turn") == turn_number:
+            memory.delete(record.id)
+
+
+def _get_turn(db: Any, session_id: str, turn_number: int) -> Turn:
+    turn = db.scalars(
+        select(Turn).where(Turn.session_id == session_id, Turn.turn_number == turn_number)
+    ).first()
+    if turn is None:
+        raise HTTPException(status_code=404, detail="turn not found")
+    return turn
+
+
+def _renarrate(backend: Backend, session, turn: Turn, user_input: str) -> str:
+    config = SessionConfig(**session.config) if session.config else SessionConfig()
+    prompt = render_prompt(load_prompt_template(), _bundle_from_stored(turn.retrieved_context), user_input, config)
+    return backend.llm.generate(
+        system=prompt, messages=[{"role": "user", "content": user_input}]
+    ).content
+
+
+def _rewrite_turn_memory(backend: Backend, session_id: str, turn_number: int, user_input: str, narrator: str) -> None:
+    memory = backend.memory_for(session_id)
+    _delete_turn_memory(memory, turn_number)
+    memory.add(
+        f"Turn {turn_number}\nPlayer: {user_input}\nNarrator: {narrator}",
+        metadata={"turn": turn_number, "type": "story_turn"},
+    )
+
+
+@app.patch("/sessions/{session_id}/turns/{turn_number}")
+def edit_turn(
+    session_id: str, turn_number: int, body: TurnInput, backend: Backend = Depends(get_backend)
+) -> dict[str, Any]:
+    """Edit a turn's user input and re-narrate it (reusing that turn's original context)."""
+    with backend.session_factory() as db:
+        session = _get_session(db, session_id)
+        turn = _get_turn(db, session_id, turn_number)
+        narrator = _renarrate(backend, session, turn, body.text)
+        turn.user_input = body.text
+        turn.narrator_text = narrator
+        _rewrite_turn_memory(backend, session_id, turn_number, body.text, narrator)
+        db.commit()
+        return {"turn_number": turn_number, "user_input": body.text, "narrator_text": narrator}
+
+
+@app.post("/sessions/{session_id}/turns/{turn_number}/regenerate")
+def regenerate_turn(
+    session_id: str, turn_number: int, backend: Backend = Depends(get_backend)
+) -> dict[str, Any]:
+    """Re-narrate a turn with the same input + a fresh sample (same original context)."""
+    with backend.session_factory() as db:
+        session = _get_session(db, session_id)
+        turn = _get_turn(db, session_id, turn_number)
+        narrator = _renarrate(backend, session, turn, turn.user_input)
+        turn.narrator_text = narrator
+        _rewrite_turn_memory(backend, session_id, turn_number, turn.user_input, narrator)
+        db.commit()
+        return {"turn_number": turn_number, "narrator_text": narrator}
+
+
+@app.delete("/sessions/{session_id}/turns/{turn_number}")
+def delete_turn(
+    session_id: str, turn_number: int, backend: Backend = Depends(get_backend)
+) -> Response:
+    """Undo a turn: remove it from the DB and its mem0 memory; step last_turn back if it was the head."""
+    with backend.session_factory() as db:
+        session = _get_session(db, session_id)
+        turn = _get_turn(db, session_id, turn_number)
+        db.delete(turn)
+        _delete_turn_memory(backend.memory_for(session_id), turn_number)
+        if session.last_turn == turn_number:
+            session.last_turn = turn_number - 1
+        db.commit()
+    return Response(status_code=204)
+
+
+# --- Export & fork (T5.1 / T5.2 — audit 7.1 / 7.3) ---------------------------------
+
+
+def _safe_filename(name: str) -> str:
+    slug = "".join(ch if ch.isalnum() or ch in "-_ " else "" for ch in name).strip()
+    return slug.replace(" ", "-").lower() or "story"
+
+
+@app.get("/sessions/{session_id}/export")
+def export_session(
+    session_id: str, format: str = "markdown", backend: Backend = Depends(get_backend)
+) -> Response:
+    """Export a story as markdown (chat), txt (prose only) or json (full dump)."""
+    with backend.session_factory() as db:
+        session = _get_session(db, session_id)
+        name = session.name
+        config = session.config
+        turns = db.scalars(
+            select(Turn).where(Turn.session_id == session_id).order_by(Turn.turn_number)
+        ).all()
+        rows = [
+            {"turn_number": t.turn_number, "user_input": t.user_input, "narrator_text": t.narrator_text}
+            for t in turns
+        ]
+        state = _memory_state(WorldState(db), session_id)
+
+    fmt = format.lower()
+    if fmt == "json":
+        body = json.dumps(
+            {"name": name, "config": config, "turns": rows, "memory_state": state},
+            ensure_ascii=False,
+            indent=2,
+        )
+        media, ext = "application/json", "json"
+    elif fmt in ("txt", "text"):
+        body = "\n\n".join(r["narrator_text"] for r in rows)
+        media, ext = "text/plain; charset=utf-8", "txt"
+    elif fmt in ("markdown", "md"):
+        lines = [f"# {name}", ""]
+        for r in rows:
+            lines += [f"## Turno {r['turn_number']}", "", f"**Você:** {r['user_input']}", "", r["narrator_text"], ""]
+        body = "\n".join(lines)
+        media, ext = "text/markdown; charset=utf-8", "md"
+    else:
+        raise HTTPException(status_code=400, detail=f"unknown format {format!r} (markdown|txt|json)")
+
+    filename = f"{_safe_filename(name)}.{ext}"
+    return Response(
+        content=body,
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/sessions/{session_id}/fork", status_code=201)
+def fork_session(
+    session_id: str, from_turn: int, backend: Backend = Depends(get_backend)
+) -> dict[str, Any]:
+    """Fork a session up to `from_turn`: independent copy of turns + world_state + mem0."""
+    new_id = uuid.uuid4().hex[:16]
+    with backend.session_factory() as db:
+        source = _get_session(db, session_id)
+        new_name = f"{source.name} — fork"
+        last_turn = min(from_turn, source.last_turn)
+        db.add(
+            Session(id=new_id, name=new_name, brief=source.brief, created_at=_now(),
+                    last_turn=last_turn, config=source.config)
+        )
+        for t in db.scalars(
+            select(Turn).where(Turn.session_id == session_id, Turn.turn_number <= from_turn)
+            .order_by(Turn.turn_number)
+        ).all():
+            db.add(Turn(session_id=new_id, turn_number=t.turn_number, user_input=t.user_input,
+                        narrator_text=t.narrator_text, retrieved_context=t.retrieved_context,
+                        created_at=_now()))
+
+        world = WorldState(db)
+        id_map: dict[int, int] = {}
+        for c in world.list(Character, session_id):
+            if c.first_appeared_turn <= from_turn:
+                new_c = world.add(Character(session_id=new_id, name=c.name, traits=list(c.traits),
+                                            first_appeared_turn=c.first_appeared_turn,
+                                            last_seen_turn=min(c.last_seen_turn, from_turn)))
+                id_map[c.id] = new_c.id
+        for loc in world.list(Location, session_id):
+            if loc.first_visited_turn <= from_turn:
+                world.add(Location(session_id=new_id, name=loc.name, description=loc.description,
+                                   first_visited_turn=loc.first_visited_turn))
+        for r in world.list(Relation, session_id):
+            if r.since_turn <= from_turn and r.a_character_id in id_map and r.b_character_id in id_map:
+                world.add(Relation(session_id=new_id, a_character_id=id_map[r.a_character_id],
+                                   b_character_id=id_map[r.b_character_id], kind=r.kind,
+                                   valence=r.valence, since_turn=r.since_turn))
+        for b in world.list(StoryBeat, session_id):
+            if b.turn <= from_turn:
+                world.add(StoryBeat(session_id=new_id, summary=b.summary, turn=b.turn,
+                                    importance=b.importance, tags=list(b.tags)))
+        db.commit()
+
+    # Copy the mem0 memories up to from_turn into the new session (separate store).
+    dst = backend.memory_for(new_id)
+    for rec in backend.memory_for(session_id).list_all():
+        if rec.metadata.get("turn", 0) <= from_turn:
+            dst.add(rec.text, metadata=rec.metadata)
+
+    return {"id": new_id, "name": new_name, "last_turn": last_turn}

@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from api.deps import Backend, get_backend
-from api.main import app
+from api.main import _RATE_LIMIT_PER_MINUTE, app
 from core.llm_fakes import FakeLlmClient
 from core.memory.mem0_adapter import MemoryRecord
 from core.memory.world_state import Base, Character, WorldState
@@ -43,6 +43,15 @@ class _MemoryProvider:
 
     def __call__(self, session_id: str) -> _FakeMem0:
         return self._by_session.setdefault(session_id, _FakeMem0(session_id))
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limit() -> Iterator[None]:
+    # Rate-limit state is process-global; clear it so tests don't leak hits into each other.
+    from api.main import reset_rate_limit
+
+    reset_rate_limit()
+    yield
 
 
 @pytest.fixture
@@ -159,11 +168,49 @@ def test_turn_on_missing_session_404(client) -> None:
     assert tc.post("/sessions/nope/turn", json={"text": "x"}).status_code == 404
 
 
-def test_health(client) -> None:
+def test_health_is_structured(client) -> None:
     tc, _ = client
     resp = tc.get("/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["db_ready"] is True
+    assert body["mem0_ready"] is True
+    assert "backend_llm" in body
+
+
+def test_cors_allows_configured_origin(client) -> None:
+    tc, _ = client
+    resp = tc.options(
+        "/sessions",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+
+def test_cors_rejects_unknown_origin(client) -> None:
+    tc, _ = client
+    resp = tc.options(
+        "/sessions",
+        headers={
+            "Origin": "http://evil.example",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    # Starlette's CORSMiddleware rejects a disallowed preflight (400, no allow-origin header).
+    assert resp.status_code == 400
+    assert "access-control-allow-origin" not in resp.headers
+
+
+def test_rate_limit_triggers_after_the_limit(client) -> None:
+    tc, _ = client
+    codes = [tc.get("/sessions").status_code for _ in range(_RATE_LIMIT_PER_MINUTE + 1)]
+    assert codes[:_RATE_LIMIT_PER_MINUTE] == [200] * _RATE_LIMIT_PER_MINUTE
+    assert codes[_RATE_LIMIT_PER_MINUTE] == 429  # the (limit+1)th request is throttled
 
 
 def test_delete_rolls_back_when_mem0_clear_fails(tmp_path: Path) -> None:

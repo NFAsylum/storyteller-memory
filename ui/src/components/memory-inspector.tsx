@@ -23,6 +23,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { api, type Character, type Location, type Relation, type StoryBeat } from "@/lib/api";
 import { useMemoryState } from "@/lib/hooks";
 
+import { RelationsGraph } from "./relations-graph";
+
 function Empty({ label }: { label: string }) {
   return <p className="p-2 text-xs text-muted-foreground">Nada em {label} ainda.</p>;
 }
@@ -232,6 +234,7 @@ export function MemoryInspector({ sessionId }: { sessionId: string }) {
         </TabsContent>
 
         <TabsContent value="rels" className="space-y-2">
+          <RelationsGraph characters={characters} relations={relations} />
           {relations.map((r) => (
             <Card key={r.id} className="flex items-start gap-2 p-3 text-sm">
               <div className="min-w-0 flex-1">
@@ -256,7 +259,6 @@ export function MemoryInspector({ sessionId }: { sessionId: string }) {
               </Actions>
             </Card>
           ))}
-          {relations.length === 0 && <Empty label="relações" />}
         </TabsContent>
 
         <TabsContent value="beats" className="space-y-2">

@@ -134,6 +134,8 @@ Provavelmente só mostra nome + traits em bullet. Sem foto/avatar/histórico.
 **Fix:** cada personagem tem: nome + auto-avatar (initial + color hash), lista de traits com badges, "first appeared: turn X", "last seen: turn Y", turnos onde aparece (chips clicáveis que scrollam a chat pra aquele turno), relações resumidas.
 
 ### 5.2 [H, P1, 3h] Sem grafo de relações
+> **Status: feito (T3.2), SVG inline (Q1 aprovada).** `RelationsGraph`: layout circular ordenado por `last_seen_turn` desc, raio maior p/ >5 relações, labels rotacionados; arestas com cor por `kind` + espessura por |valência|; hover destaca as arestas do nó (dim resto); click no nó → scroll do chat pro 1º turno do personagem (event bus `scroll-to-turn`, reusado pelo T3.1); legend clicável que filtra por tipo; empty state informativo. Sem reactflow. Falta só verificação visual. (Filtro por range de valência: follow-up leve.)
+
 Relações listadas como texto ("Aria-Vex, antagonista, valence -2"). Deveria ser um grafo visual.
 **Fix:** react-flow ou similar, nodes = characters, edges = relations com espessura por valence. Filtra por personagem selecionado.
 

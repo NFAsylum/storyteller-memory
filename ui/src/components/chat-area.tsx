@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 
@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/hooks";
+import { onScrollToTurn } from "@/lib/scroll-to-turn";
 
 import { SessionConfigChip } from "./session-config-chip";
 
@@ -23,6 +24,17 @@ export function ChatArea({
   const { data: session, isLoading } = useSession(sessionId);
   const [text, setText] = useState(initialInput ?? "");
   const [busy, setBusy] = useState(false);
+
+  // Let the Memory Inspector graph scroll the chat to a character's first turn.
+  useEffect(
+    () =>
+      onScrollToTurn((turn) => {
+        document
+          .getElementById(`turn-${turn}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }),
+    [],
+  );
 
   async function send() {
     const value = text.trim();
@@ -53,7 +65,7 @@ export function ChatArea({
         <div className="mx-auto max-w-2xl space-y-4">
           {isLoading && <Skeleton className="h-24 w-full" />}
           {session?.turns.map((t) => (
-            <div key={t.turn_number} data-testid="turn" className="space-y-2">
+            <div key={t.turn_number} id={`turn-${t.turn_number}`} data-testid="turn" className="space-y-2">
               <p className="text-sm">
                 <span className="font-semibold">Você:</span> {t.user_input}
               </p>

@@ -172,6 +172,8 @@ Se usuário quer *itálico* ou negrito na sua descrição, não tem como.
 **Fix:** input aceita markdown básico + preview.
 
 ### 6.4 [M, P2, 2h] Sem timestamps visíveis
+> **Status: feito (T4.2).** Cada turno mostra timestamp relativo ("5 min atrás", "ontem"); actor distinto (input do usuário à direita com accent, narração à esquerda neutra); turno atual com highlight sutil; toggle de auto-scroll no header. Também: botões edit/regenerate/undo/fork por turno (frontend do 6.1/6.2) + Export dropdown (7.1) + Fork (7.3). Falta só verificação visual.
+
 Turno de 3 dias atrás vs 3 min atrás parece igual.
 **Fix:** relative timestamps ("5 minutes ago", "yesterday", "3 days ago") em cada mensagem.
 

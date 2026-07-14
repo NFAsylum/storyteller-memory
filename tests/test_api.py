@@ -231,6 +231,25 @@ def test_health_is_structured(client) -> None:
     assert body["db_ready"] is True
     assert body["mem0_ready"] is True
     assert "backend_llm" in body
+    # T-STATUS.1: model in use is exposed. Tests run under the fake backend.
+    assert body["llm_model"] == "fake"
+
+
+def test_health_llm_model_anthropic(client, monkeypatch) -> None:
+    tc, _ = client
+    monkeypatch.setenv("LLM_BACKEND", "anthropic")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+    body = tc.get("/health").json()
+    assert body["llm_model"] == "claude-sonnet-4-6"
+
+
+def test_health_llm_model_local_unreachable(client, monkeypatch) -> None:
+    tc, _ = client
+    monkeypatch.setenv("LLM_BACKEND", "local")
+    # llama-server down → detect returns None → label falls back gracefully.
+    monkeypatch.setattr("core.llm_local.detect_local_model", lambda: None)
+    body = tc.get("/health").json()
+    assert body["llm_model"] == "local-unreachable"
 
 
 def test_cors_allows_configured_origin(client) -> None:

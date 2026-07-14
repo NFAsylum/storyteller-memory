@@ -5,7 +5,10 @@ import { describe, expect, it, vi } from "vitest";
 import { Workspace } from "./workspace";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
-vi.mock("@/lib/hooks", () => ({ useSessions: () => ({ data: [], isLoading: false }) }));
+vi.mock("@/lib/hooks", () => ({
+  useSessions: () => ({ data: [], isLoading: false }),
+  useHealth: () => ({ data: { backend_llm: "fake", llm_model: "fake" }, error: undefined, isLoading: false }),
+}));
 
 describe("Workspace", () => {
   it("colapsa e reexibe a sidebar pelo toggle (em qualquer tamanho)", async () => {

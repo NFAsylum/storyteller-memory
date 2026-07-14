@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ChatArea } from "./chat-area";
 import { DebugPanel } from "./debug-panel";
 import { MemoryInspector } from "./memory-inspector";
+import { ModelStatusChip } from "./model-status-chip";
 import { SessionsSidebar } from "./sessions-sidebar";
 
 // Shell colapsável: sessões (esquerda) e memória (direita) podem ser fechadas em
@@ -47,6 +48,7 @@ export function Workspace({
             <PanelLeft className="size-4" />
           </Button>
           <span className="flex-1" />
+          <ModelStatusChip />
           {activeId && (
             <Button
               variant="ghost"

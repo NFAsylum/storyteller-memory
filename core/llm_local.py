@@ -7,7 +7,10 @@ valid because the same model is used for both baseline and augmented configs.
 
 from __future__ import annotations
 
+import json
 import os
+import time
+import urllib.request
 from typing import Any
 
 from openai import OpenAI
@@ -21,6 +24,48 @@ DEFAULT_TEMPERATURE = 0.0  # deterministic decoding (F1.5)
 DEFAULT_SEED = 42  # fixed seed so harness runs are reproducible; override via LOCAL_LLM_SEED
 # llama-server ignores the key but the OpenAI SDK requires a non-empty field.
 LOCAL_API_KEY = "local"
+
+MODEL_QUERY_TIMEOUT_S = 2.0  # keep /health snappy even if llama-server is unreachable
+_MODEL_CACHE_TTL_S = 30.0  # avoid hitting llama-server on every /health request
+# Live-detected model id, cached with its wall-clock timestamp (0.0 = never queried).
+_MODEL_CACHE: dict[str, Any] = {"value": None, "at": 0.0}
+
+
+def _fetch_local_model(base_url: str, timeout_s: float) -> str | None:
+    """GET {base_url}/models and return the first model id.
+
+    Returns None when the server is unreachable or times out, or the sentinel
+    "local-unknown-format" when it answers but not in the OpenAI /v1/models shape.
+    """
+    url = base_url.rstrip("/") + "/models"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout_s) as resp:  # noqa: S310 - fixed local URL
+            payload = json.loads(resp.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001 - any network/parse failure means "unreachable"
+        return None
+    try:
+        return str(payload["data"][0]["id"])
+    except (KeyError, IndexError, TypeError):
+        return "local-unknown-format"
+
+
+def detect_local_model(
+    url: str | None = None, timeout_s: float = MODEL_QUERY_TIMEOUT_S
+) -> str | None:
+    """Model id llama-server actually has loaded (cached 30s), or None if unreachable.
+
+    Env config (LOCAL_LLM_MODEL) is only a hint: llama-server serves whatever model it
+    has loaded regardless of the requested id, so a truthful status must query the server
+    itself. The 30s cache keeps /health from hitting llama-server on every request.
+    """
+    now = time.time()
+    if now - _MODEL_CACHE["at"] < _MODEL_CACHE_TTL_S:
+        return _MODEL_CACHE["value"]
+    base_url = url or os.environ.get("LOCAL_LLM_URL")
+    value = _fetch_local_model(base_url, timeout_s) if base_url else None
+    _MODEL_CACHE["value"] = value
+    _MODEL_CACHE["at"] = now
+    return value
 
 
 class LocalLlmClient:

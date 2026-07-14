@@ -132,14 +132,31 @@ def _mem0_ready(backend: Backend) -> bool:
         return False
 
 
+def _llm_model_label() -> str:
+    """Model actually serving requests: queried live for local, env-derived otherwise.
+
+    local  → the id llama-server reports (or "local-unreachable" if it's down);
+    anthropic → ANTHROPIC_MODEL env or the pinned default; fake → "fake".
+    """
+    backend = os.environ.get("LLM_BACKEND", "fake").lower()
+    if backend == "anthropic":
+        return os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+    if backend == "local":
+        from core.llm_local import detect_local_model
+
+        return detect_local_model() or "local-unreachable"
+    return "fake"
+
+
 @app.get("/health")
 def health(backend: Backend = Depends(get_backend)) -> dict[str, Any]:
-    """Structured readiness: LLM backend name + mem0/DB reachability (always 200)."""
+    """Structured readiness: LLM backend + live model + mem0/DB reachability (always 200)."""
     db_ok = _db_ready(backend)
     mem0_ok = _mem0_ready(backend)
     return {
         "status": "ok" if (db_ok and mem0_ok) else "degraded",
         "backend_llm": os.environ.get("LLM_BACKEND", "fake"),
+        "llm_model": _llm_model_label(),
         "mem0_ready": mem0_ok,
         "db_ready": db_ok,
     }

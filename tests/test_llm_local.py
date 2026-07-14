@@ -1,10 +1,12 @@
 """Tests for LocalLlmClient — OpenAI SDK mocked (no real llama-server hit)."""
 
+import json
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
+from core import llm_local
 from core.llm_client import LlmResponse, create_llm_client
 from core.llm_local import LocalLlmClient
 
@@ -73,3 +75,68 @@ def test_missing_url_fails_clearly(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LOCAL_LLM_URL", raising=False)
     with pytest.raises(ValueError, match="LOCAL_LLM_URL"):
         LocalLlmClient()
+
+
+# --- T-STATUS.1: live model detection (env is a hint, llama-server is the truth) ---
+
+
+class _FakeResp:
+    """Minimal stand-in for the urllib.request.urlopen context manager."""
+
+    def __init__(self, body: bytes) -> None:
+        self._body = body
+
+    def __enter__(self) -> "_FakeResp":
+        return self
+
+    def __exit__(self, *_exc: object) -> bool:
+        return False
+
+    def read(self) -> bytes:
+        return self._body
+
+
+def _reset_model_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(llm_local, "_MODEL_CACHE", {"value": None, "at": 0.0})
+
+
+def test_detect_local_model_returns_first_id_and_caches(monkeypatch: pytest.MonkeyPatch) -> None:
+    _reset_model_cache(monkeypatch)
+    calls: list[str] = []
+
+    def fake_fetch(base_url: str, timeout_s: float) -> str:
+        calls.append(base_url)
+        return "qwen2.5-coder-7b"
+
+    monkeypatch.setattr(llm_local, "_fetch_local_model", fake_fetch)
+    monkeypatch.setenv("LOCAL_LLM_URL", "http://local/v1")
+
+    assert llm_local.detect_local_model() == "qwen2.5-coder-7b"
+    assert llm_local.detect_local_model() == "qwen2.5-coder-7b"  # served from the 30s cache
+    assert len(calls) == 1  # llama-server hit at most once within the TTL
+
+
+def test_detect_local_model_unreachable_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    _reset_model_cache(monkeypatch)
+    monkeypatch.setattr(llm_local, "_fetch_local_model", lambda base, timeout: None)
+    monkeypatch.setenv("LOCAL_LLM_URL", "http://local/v1")
+    assert llm_local.detect_local_model() is None
+
+
+def test_detect_local_model_no_url_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    _reset_model_cache(monkeypatch)
+    monkeypatch.delenv("LOCAL_LLM_URL", raising=False)
+    assert llm_local.detect_local_model() is None
+
+
+def test_fetch_local_model_parses_openai_shape(monkeypatch: pytest.MonkeyPatch) -> None:
+    body = json.dumps({"data": [{"id": "qwen2.5-coder-7b"}]}).encode("utf-8")
+    monkeypatch.setattr(llm_local.urllib.request, "urlopen", lambda url, timeout: _FakeResp(body))
+    assert llm_local._fetch_local_model("http://local/v1", 2.0) == "qwen2.5-coder-7b"
+
+
+def test_fetch_local_model_unknown_shape_returns_sentinel(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        llm_local.urllib.request, "urlopen", lambda url, timeout: _FakeResp(b'{"weird": true}')
+    )
+    assert llm_local._fetch_local_model("http://local/v1", 2.0) == "local-unknown-format"

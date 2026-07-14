@@ -2,10 +2,24 @@
 
 import useSWR from "swr";
 
-import { api, type MemoryState, type SessionDetail, type SessionSummary } from "./api";
+import {
+  api,
+  type HealthStatus,
+  type MemoryState,
+  type SessionDetail,
+  type SessionSummary,
+} from "./api";
 
 export function useSessions() {
   return useSWR<SessionSummary[]>("sessions", api.listSessions);
+}
+
+// Backend + live model status, polled every 30s (matches the server-side detect cache).
+export function useHealth() {
+  return useSWR<HealthStatus>("health", api.health, {
+    refreshInterval: 30_000,
+    revalidateOnFocus: false,
+  });
 }
 
 export function useSession(id: string | null) {

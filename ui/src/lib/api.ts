@@ -145,7 +145,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+export interface HealthStatus {
+  status: string;
+  backend_llm: string;
+  llm_model: string;
+  mem0_ready: boolean;
+  db_ready: boolean;
+}
+
 export const api = {
+  health: () => request<HealthStatus>("/health"),
   listSessions: () => request<SessionSummary[]>("/sessions"),
   createSession: (name: string, brief = "", config?: SessionConfig) =>
     request<{ id: string; name: string; last_turn: number; config: SessionConfig }>("/sessions", {
